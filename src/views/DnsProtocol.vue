@@ -23,7 +23,7 @@
         v-model="domainInput"
         type="text"
         class="flex-1 bg-white/5 border border-border-subtle rounded-lg px-4 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent-primary transition-colors font-mono"
-        placeholder="例如：www.example.com"
+        placeholder="例如：www.lessybest.com"
         @keyup.enter="handleStart"
       />
       <button class="btn-primary text-sm shrink-0" @click="handleStart">
@@ -175,7 +175,7 @@ import TopoCanvas from '@/components/TopoCanvas.vue'
 import StepIndicator from '@/components/StepIndicator.vue'
 import { dnsSteps, dnsNodes, dnsConnections } from '@/data/dns.js'
 
-const domainInput = ref('www.example.com')
+const domainInput = ref('www.lessybest.com')
 const currentStepIndex = ref(-1)
 const isPlaying = ref(false)
 const speed = ref(1)
