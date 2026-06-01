@@ -12,7 +12,7 @@
             <line x1="9" y1="9" x2="9" y2="15" stroke="#7c3aed" stroke-width="1.5"/>
           </svg>
         </div>
-        <span class="font-semibold text-sm text-text-primary tracking-wide">网络实习</span>
+        <span class="font-semibold text-sm text-text-primary tracking-wide">李思绎的网络实习</span>
       </router-link>
 
       <!-- Desktop Nav -->

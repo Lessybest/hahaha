@@ -8,7 +8,7 @@
       <div class="fade-up stagger-1 text-center max-w-3xl">
         <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-accent-primary/30 bg-accent-primary/10 text-xs text-accent-primary mb-6">
           <span class="w-1.5 h-1.5 rounded-full bg-accent-primary animate-pulse"></span>
-          2026 网络实习 · 计算机科学与技术
+          2026 李思绎的网络实习 · 计算机科学与技术
         </div>
         <h1 class="text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight mb-4">
           <span class="text-gradient">计算机网络</span><br/>
