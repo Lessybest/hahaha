@@ -1,0 +1,134 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    margin: 0;
+    background-color: #0a0a0f;
+    color: #f0f0f5;
+    font-family: 'Inter', -apple-system, system-ui, sans-serif;
+    overflow-x: hidden;
+    min-height: 100vh;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #111118;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: rgba(0, 212, 255, 0.3);
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 212, 255, 0.5);
+  }
+}
+
+@layer components {
+  .glass-card {
+    background: rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 16px;
+  }
+
+  .glass-nav {
+    background: rgba(10, 10, 15, 0.7);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .btn-primary {
+    @apply px-5 py-2.5 bg-accent-primary text-bg-primary font-semibold rounded-lg
+           transition-all duration-200 cursor-pointer select-none
+           hover:shadow-[0_0_20px_rgba(0,212,255,0.4)]
+           active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+
+  .btn-secondary {
+    @apply px-5 py-2.5 border border-border-subtle text-text-primary font-medium rounded-lg
+           transition-all duration-200 cursor-pointer select-none
+           hover:border-border-hover hover:bg-white/5
+           active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+
+  .btn-ghost {
+    @apply px-4 py-2 text-text-secondary font-medium rounded-lg
+           transition-all duration-200 cursor-pointer select-none
+           hover:text-text-primary hover:bg-white/5
+           active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+
+  .card-hover {
+    @apply transition-all duration-300 cursor-pointer
+           hover:-translate-y-1 hover:border-border-hover
+           hover:shadow-[0_8px_40px_rgba(0,212,255,0.12)];
+  }
+
+  .step-active {
+    @apply bg-accent-primary/20 border-accent-primary text-accent-primary;
+  }
+
+  .step-done {
+    @apply bg-accent-success/20 border-accent-success text-accent-success;
+  }
+
+  .step-pending {
+    @apply bg-white/5 border-border-subtle text-text-muted;
+  }
+
+  .table-glass {
+    @apply w-full text-sm;
+  }
+
+  .table-glass th {
+    @apply text-left text-text-muted font-medium px-4 py-2 border-b border-border-subtle;
+  }
+
+  .table-glass td {
+    @apply px-4 py-2.5 border-b border-white/5 font-mono text-xs;
+  }
+
+  .table-glass tr:hover td {
+    @apply bg-white/10;
+  }
+
+  .fade-up {
+    opacity: 0;
+    transform: translateY(20px);
+    animation: fadeUp 0.5s ease-out forwards;
+  }
+
+  @keyframes fadeUp {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .stagger-1 { animation-delay: 0ms; }
+  .stagger-2 { animation-delay: 80ms; }
+  .stagger-3 { animation-delay: 160ms; }
+  .stagger-4 { animation-delay: 240ms; }
+  .stagger-5 { animation-delay: 320ms; }
+  .stagger-6 { animation-delay: 400ms; }
+}
+
+@layer utilities {
+  .text-gradient {
+    @apply bg-gradient-to-r from-accent-primary to-accent-secondary bg-clip-text text-transparent;
+  }
+}

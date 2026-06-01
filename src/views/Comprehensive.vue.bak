@@ -1,0 +1,335 @@
+<template>
+  <div class="min-h-screen px-4 md:px-8 pb-16 max-w-6xl mx-auto">
+    <div class="pt-8 pb-6 fade-up">
+      <h1 class="text-2xl font-bold mb-2">综合网络场景模拟</h1>
+      <p class="text-text-secondary text-sm">
+        H1（192.168.1.100）访问 www.abc.com 的完整通信过程 — 从 ARP → DNS → TCP → HTTP 全链路可视化
+      </p>
+    </div>
+
+    <!-- Topology -->
+    <div class="glass-card p-6 mb-6 fade-up stagger-1">
+      <h3 class="text-sm font-semibold text-text-muted uppercase tracking-widest mb-4">网络拓扑</h3>
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+        <div v-for="node in topoNodes" :key="node.id"
+          class="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-border-subtle bg-white/5 text-center"
+          :class="isNodeHighlighted(node.id) ? 'ring-2 ring-accent-primary/60 bg-accent-primary/10' : ''"
+        >
+          <div class="w-8 h-8 rounded-full border-2 flex items-center justify-center text-xs"
+            :style="{ borderColor: node.color, color: node.color }">
+            {{ node.shortLabel }}
+          </div>
+          <span class="text-xs font-medium text-text-primary">{{ node.label }}</span>
+          <span class="text-[10px] text-text-muted font-mono">{{ node.ip }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="glass-card p-4 mb-6 fade-up stagger-2">
+      <div class="flex flex-wrap gap-2 items-center mb-4">
+        <button class="btn-primary text-sm" @click="handleStart" :disabled="playing">
+          <span class="flex items-center gap-1.5">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><path d="M3 2l9 5-9 5V2z"/></svg>
+            开始演示
+          </span>
+        </button>
+        <button class="btn-secondary text-sm" @click="handleNext" :disabled="playing || stepIndex >= steps.length - 1">下一步</button>
+        <button class="btn-secondary text-sm" @click="handlePrev" :disabled="playing || stepIndex <= 0">上一步</button>
+        <button class="btn-ghost text-sm" @click="handleReset">重置</button>
+        <!-- Speed Control -->
+        <div class="ml-auto flex items-center gap-2 text-xs text-text-muted">
+          <span>速度：</span>
+          <button v-for="s in speedOptions" :key="s.value"
+            class="px-2 py-1 rounded"
+            :class="speed === s.value ? 'bg-accent-primary/20 text-accent-primary' : 'hover:bg-white/10'"
+            @click="speed = s.value"
+          >{{ s.label }}</button>
+        </div>
+      </div>
+      <StepIndicator :steps="steps" :current-index="stepIndex" />
+    </div>
+
+    <!-- Main Content -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- Step Info -->
+      <div class="lg:col-span-2 space-y-4">
+        <div class="glass-card p-5 fade-up stagger-3">
+          <div class="flex items-center gap-3 mb-3">
+            <span
+              class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold"
+              :class="currentStep ? 'bg-accent-secondary/20 text-accent-secondary border border-accent-secondary/40' : 'bg-white/5 text-text-muted border border-border-subtle'"
+            >{{ stepIndex + 1 }}</span>
+            <div>
+              <div class="font-semibold">{{ currentStep?.title || '准备开始' }}</div>
+              <div class="text-xs text-text-muted">{{ currentStep?.protocol }}</div>
+            </div>
+          </div>
+          <p class="text-text-secondary text-sm leading-relaxed">{{ currentStep?.description }}</p>
+        </div>
+
+        <!-- Packet Detail -->
+        <div v-if="currentStep && currentStep.packetDetail" class="glass-card p-5 fade-up stagger-4">
+          <h3 class="text-xs font-semibold text-text-muted uppercase tracking-widest mb-3">报文详情</h3>
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div v-for="(val, key) in currentStep.packetDetail" :key="key" class="bg-white/5 rounded-lg p-3">
+              <div class="text-[10px] text-text-muted mb-1">{{ formatKey(key) }}</div>
+              <div class="text-xs font-mono text-text-primary break-all">{{ val }}</div>
+            </div>
+          </div>
+          <div v-if="currentStep.message" class="mt-3 text-xs text-accent-primary bg-accent-primary/10 rounded-lg p-3">
+            {{ currentStep.message }}
+          </div>
+        </div>
+
+        <!-- Protocol Stack Visualization -->
+        <div v-if="currentStep && currentStep.protocolStack" class="glass-card p-5 fade-up stagger-5">
+          <h3 class="text-xs font-semibold text-text-muted uppercase tracking-widest mb-3">协议栈封装过程</h3>
+          <div class="space-y-1">
+            <div v-for="(layer, i) in currentStep.protocolStack" :key="i"
+              class="flex items-center gap-3 p-2 rounded-lg"
+              :class="i === 0 ? 'bg-accent-primary/10 border border-accent-primary/30' : 'bg-white/5'"
+            >
+              <span class="text-[10px] text-text-muted w-16 text-right">{{ layer.layer }}</span>
+              <span class="text-xs font-mono flex-1" :style="{ color: layer.color }">{{ layer.content }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tables -->
+      <div class="space-y-4">
+        <div class="glass-card p-4 fade-up stagger-4">
+          <h3 class="text-xs font-semibold text-text-muted uppercase tracking-widest mb-3">H1 ARP表</h3>
+          <table class="table-glass text-[11px]">
+            <thead><tr><th>IP</th><th>MAC</th><th>TTL</th></tr></thead>
+            <tbody>
+              <tr v-if="arpTable.length === 0"><td colspan="3" class="text-center text-text-muted py-2">空</td></tr>
+              <tr v-for="(r, i) in arpTable" :key="i" :class="r.new ? 'bg-accent-success/10' : ''">
+                <td class="text-accent-primary">{{ r.ip }}</td>
+                <td class="font-mono">{{ r.mac }}</td>
+                <td class="text-text-muted">{{ r.ttl || '-' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="glass-card p-4 fade-up stagger-5">
+          <h3 class="text-xs font-semibold text-text-muted uppercase tracking-widest mb-3">交换机S MAC表</h3>
+          <table class="table-glass text-[11px]">
+            <thead><tr><th>MAC</th><th>端口</th><th> age</th></tr></thead>
+            <tbody>
+              <tr v-if="macTable.length === 0"><td colspan="3" class="text-center text-text-muted py-2">空</td></tr>
+              <tr v-for="(r, i) in macTable" :key="i" :class="r.new ? 'bg-accent-secondary/10' : ''">
+                <td class="font-mono">{{ r.mac }}</td>
+                <td class="text-accent-primary">{{ r.port }}</td>
+                <td class="text-text-muted">{{ r.age }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="glass-card p-4 fade-up stagger-6">
+          <h3 class="text-xs font-semibold text-text-muted uppercase tracking-widest mb-3">DNS缓存表（H1）</h3>
+          <table class="table-glass text-[11px]">
+            <thead><tr><th>域名</th><th>IP</th><th>TTL</th></tr></thead>
+            <tbody>
+              <tr v-if="dnsCache.length === 0"><td colspan="3" class="text-center text-text-muted py-2">空</td></tr>
+              <tr v-for="(r, i) in dnsCache" :key="i" :class="r.new ? 'bg-accent-success/10' : ''">
+                <td class="text-accent-primary">{{ r.domain }}</td>
+                <td class="font-mono">{{ r.ip }}</td>
+                <td class="text-text-muted">{{ r.ttl || '-' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <!-- TCP State -->
+        <div v-if="tcpState.length > 0" class="glass-card p-4 fade-up stagger-7">
+          <h3 class="text-xs font-semibold text-text-muted uppercase tracking-widest mb-3">TCP连接状态</h3>
+          <div class="space-y-1 text-[11px] font-mono">
+            <div v-for="(s, i) in tcpState" :key="i" class="flex items-center gap-2 p-1.5 rounded"
+              :class="s.active ? 'bg-accent-primary/10 text-accent-primary' : 'text-text-muted'">
+              <span>{{ s.flag }}</span>
+              <span class="flex-1">{{ s.desc }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, computed } from 'vue'
+import StepIndicator from '@/components/StepIndicator.vue'
+
+const topoNodes = [
+  { id: 'h1',   shortLabel: 'H1',  label: '主机 H1',       ip: '192.168.1.100',      color: '#00d4ff' },
+  { id: 'sw',   shortLabel: 'S',   label: '交换机 S',      ip: '-',                    color: '#7c3aed' },
+  { id: 'dns',  shortLabel: 'DNS', label: '本地 DNS',       ip: '192.168.1.1',        color: '#10b981' },
+  { id: 'r',    shortLabel: 'R',   label: '路由器 R（网关）', ip: '192.168.1.1 / 203.0.113.1', color: '#f59e0b' },
+  { id: 'web',  shortLabel: 'Web', label: 'Web 服务器',     ip: '93.184.216.34',      color: '#ec4899' },
+]
+
+const speedOptions = [
+  { label: '慢速', value: 4000 },
+  { label: '正常', value: 2500 },
+  { label: '快速', value: 1200 },
+]
+const speed = ref(2500)
+
+// ==================== 优化后的8步流程 ====================
+const steps = [
+  // Step 1: DNS缓存未命中 → 需要ARP解析网关MAC
+  {
+    id: 1,
+    title: 'H1 检查 DNS 缓存',
+    description: 'H1 在浏览器输入 www.abc.com，操作系统先检查本地 DNS 缓存（/etc/hosts、DNS 解析器缓存），未命中。需要向本地 DNS 服务器 192.168.1.1 发起查询，但不知道其 MAC 地址。',
+    protocol: 'DNS + ARP',
+    protocolColor: '#f59e0b',
+    srcIP: '192.168.1.100',
+    dstIP: '192.168.1.1',
+    srcMAC: '00:11:22:33:44:01',
+    dstMAC: '未知（需 ARP）',
+    broadcast: false,
+    packetDetail: {
+      type: 'DNS Query (缓存未命中)',
+      domain: 'www.abc.com A记录',
+      recursive: '是（RD=1）',
+      note: '需先获取网关 MAC 才能发送',
+    },
+    protocolStack: [
+      { layer: '应用层', content: 'DNS Query: www.abc.com A', color: '#00d4ff' },
+      { layer: '传输层', content: 'UDP 端口 53', color: '#10b981' },
+      { layer: '网络层', content: 'Src: 192.168.1.100 → Dst: 192.168.1.1', color: '#7c3aed' },
+      { layer: '链路层', content: '⚠️ 目的 MAC 未知，暂缓发送', color: '#f59e0b' },
+    ],
+    arpTableBefore: [],
+    arpTableAfter: [
+      { ip: '192.168.1.1', mac: '待查询', ttl: '-', new: true },
+    ],
+    macTableBefore: [],
+    macTableAfter: [],
+    dnsCacheBefore: [],
+    dnsCacheAfter: [],
+    tcpState: [],
+    highlightNodes: ['h1'],
+    message: 'DNS缓存未命中 → 需要先 ARP 解析网关 MAC',
+  },
+
+  // Step 2: ARP Request 广播
+  {
+    id: 2,
+    title: 'ARP Request 广播（查询网关 MAC）',
+    description: 'H1 发送 ARP Request 广播帧（目的 MAC = ff:ff:ff:ff:ff:ff），询问："IP 为 192.168.1.1 的主机，请告诉我你的 MAC 地址！" 交换机收到后向所有端口泛洪。',
+    protocol: 'ARP',
+    protocolColor: '#f59e0b',
+    srcIP: '192.168.1.100',
+    dstIP: '192.168.1.1',
+    srcMAC: '00:11:22:33:44:01',
+    dstMAC: 'ff:ff:ff:ff:ff:ff (广播)',
+    broadcast: true,
+    packetDetail: {
+      type: 'ARP Request (Opcode=1)',
+      '硬件类型': 'Ethernet (1)',
+      '协议类型': 'IPv4 (0x0800)',
+      '发送方 MAC': '00:11:22:33:44:01',
+      '发送方 IP': '192.168.1.100',
+      '目标 MAC': '00:00:00:00:00:00 (未知)',
+      '目标 IP': '192.168.1.1',
+    },
+    protocolStack: [
+      { layer: '链路层', content: 'ARP Request 广播帧，EtherType=0x0806', color: '#f59e0b' },
+    ],
+    arpTableBefore: [
+      { ip: '192.168.1.1', mac: '待查询', ttl: '-', new: true },
+    ],
+    arpTableAfter: [
+      { ip: '192.168.1.1', mac: '待查询', ttl: '-' },
+    ],
+    macTableBefore: [
+      { mac: '00:11:22:33:44:01', port: 'Port1', age: '新学习', new: true },
+    ],
+    macTableAfter: [
+      { mac: '00:11:22:33:44:01', port: 'Port1', age: '0分钟' },
+    ],
+    dnsCacheBefore: [],
+    dnsCacheAfter: [],
+    tcpState: [],
+    highlightNodes: ['h1', 'sw'],
+    message: 'ARP Request 广播：Who has 192.168.1.1? Tell 192.168.1.100',
+  },
+
+  // Step 3: ARP Reply 单播
+  {
+    id: 3,
+    title: 'ARP Reply 单播（网关响应）',
+    description: '路由器 R（网关）收到 ARP Request 后，发现目标 IP 是自己，于是构造 ARP Reply 单播帧，直接回复给 H1："我是 192.168.1.1，我的 MAC 是 00:aa:bb:cc:dd:01！" H1 收到后将映射写入 ARP 缓存表（动态条目，TTL=20分钟）。',
+    protocol: 'ARP',
+    protocolColor: '#10b981',
+    srcIP: '192.168.1.1',
+    dstIP: '192.168.1.100',
+    srcMAC: '00:aa:bb:cc:dd:01',
+    dstMAC: '00:11:22:33:44:01',
+    broadcast: false,
+    packetDetail: {
+      type: 'ARP Reply (Opcode=2)',
+      '硬件类型': 'Ethernet (1)',
+      '协议类型': 'IPv4 (0x0800)',
+      '发送方 MAC': '00:aa:bb:cc:dd:01',
+      '发送方 IP': '192.168.1.1',
+      '目标 MAC': '00:11:22:33:44:01',
+      '目标 IP': '192.168.1.100',
+    },
+    protocolStack: [
+      { layer: '链路层', content: 'ARP Reply 单播帧，EtherType=0x0806', color: '#10b981' },
+    ],
+    arpTableBefore: [
+      { ip: '192.168.1.1', mac: '待查询', ttl: '-' },
+    ],
+    arpTableAfter: [
+      { ip: '192.168.1.1', mac: '00:aa:bb:cc:dd:01', ttl: '20分钟', type: '动态', new: true },
+    ],
+    macTableBefore: [
+      { mac: '00:11:22:33:44:01', port: 'Port1', age: '0分钟' },
+    ],
+    macTableAfter: [
+      { mac: '00:11:22:33:44:01', port: 'Port1', age: '0分钟' },
+      { mac: '00:aa:bb:cc:dd:01', port: 'Port2', age: '新学习', new: true },
+    ],
+    dnsCacheBefore: [],
+    dnsCacheAfter: [],
+    tcpState: [],
+    highlightNodes: ['r', 'sw', 'h1'],
+    message: 'ARP 解析完成！192.168.1.1 → 00:aa:bb:cc:dd:01（动态条目，TTL=20分钟）',
+  },
+
+  // Step 4: 发送 DNS 查询
+  {
+    id: 4,
+    title: '发送 DNS 查询（UDP 端口 53）',
+    description: 'H1 现在知道网关 MAC，构造 DNS 查询报文（UDP 数据报，目标端口 53），目的 IP 为本地 DNS 服务器 192.168.1.1。报文经交换机转发到网关，再由网关路由到互联网上的 DNS 服务器。',
+    protocol: 'DNS',
+    protocolColor: '#00d4ff',
+    srcIP: '192.168.1.100',
+    dstIP: '192.168.1.1',
+    srcMAC: '00:11:22:33:44:01',
+    dstMAC: '00:aa:bb:cc:dd:01',
+    broadcast: false,
+    packetDetail: {
+      type: 'DNS Query (递归)',
+      '事务 ID': '0x1a2b (随机)',
+      '标志位': 'RD=1 (期望递归查询)',
+      '问题数': '1 (www.abc.com A)',
+      '回答数': '0 (查询阶段)',
+      '查询类型': 'A记录 (IPv4地址)',
+    },
+    protocolStack: [
+      { layer: '应用层', content: 'DNS Query: www.abc.com A', color: '#00d4ff' },
+      { layer: '传输层', content: 'UDP Src:49152 → Dst:53', color: '#10b981' },
+      { layer: '网络层', content: 'Src: 192.168.1.100 → Dst: 192.168.1.1', color: '#7c3aed' },
+      { layer: '链路层', content: 'Src MAC: 00:11:22:33:44:01 → Dst MAC: 00:aa:bb:cc:dd:01', color: '#f59e0b' },
+    ],
+    arpTableBefore: [
+      { ip: '192.168.1.1', mac: '00:aa:bb:cc:dd:01', ttl: '20分钟', type: '动态', new: true },
+    ],
+    arpTableAfter: [
+      { ip: '192.168.1.1', mac: '00:aa:bb:cc:dd:01', ttl: '20分钟', type: '
