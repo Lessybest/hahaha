@@ -13,7 +13,7 @@
         <h1 class="text-2xl font-bold">ARP地址解析</h1>
       </div>
       <p class="text-text-secondary text-sm">
-        展示ARP Request广播与ARP Reply单播的完整过程，动态呈现交换机MAC地址表的学习与更新机制。
+        展示ARP Request广播与ARP Reply单播的完整过程，动态呈现ARP缓存表写入与交换机MAC地址表的学习更新机制。
       </p>
     </div>
 
@@ -27,7 +27,7 @@
         placeholder="例如：192.168.1.200"
         @keyup.enter="handleStart"
       />
-      <button class="btn-primary text-sm shrink-0 bg-accent-warning/90 hover:bg-accent-warning" @click="handleStart">
+      <button class="btn-primary text-sm shrink-0 bg-accent-warning/90 hover:bg-accent-warning" @click="handleStart" :disabled="isPlaying">
         发起ARP请求
       </button>
     </div>
@@ -71,7 +71,7 @@
               >{{ s }}x</button>
             </div>
           </div>
-          <StepIndicator :steps="arpSteps" :current-index="currentStepIndex" />
+          <StepIndicator :steps="arpSteps" :current-index="currentStepIndex" @goto="gotoStep" />
         </div>
       </div>
 
@@ -82,19 +82,63 @@
           <div class="flex items-center gap-2 mb-3">
             <span
               class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
-              :class="currentStep ? 'bg-accent-warning/20 text-accent-warning border border-accent-warning/40' : 'bg-white/5 text-text-muted border border-border-subtle'"
+              :class="currentStep ? (currentStep.isSummary ? 'bg-accent-success/20 text-accent-success border border-accent-success/40' : 'bg-accent-warning/20 text-accent-warning border border-accent-warning/40') : 'bg-white/5 text-text-muted border border-border-subtle'"
             >{{ currentStepIndex + 1 }}</span>
             <span class="font-semibold text-sm">{{ currentStep?.title || '准备就绪' }}</span>
+            <span v-if="currentStep?.isSummary" class="text-[10px] px-2 py-0.5 rounded bg-accent-success/20 text-accent-success">结果汇总</span>
           </div>
           <p class="text-text-secondary text-sm leading-relaxed mb-3">
             {{ currentStep?.description || '点击"开始"按钮，逐步观察ARP解析的每一个步骤。' }}
           </p>
-          <div v-if="currentStep" class="text-xs" :class="currentStep.broadcast ? 'text-accent-warning' : 'text-accent-success'">
+          <div v-if="currentStep" class="text-xs" :class="currentStep.isSummary ? 'text-accent-success' : (currentStep.broadcast ? 'text-accent-warning' : 'text-accent-success')">
             {{ currentStep.message }}
           </div>
         </div>
 
-        <!-- ARP Table -->
+        <!-- Packet Info -->
+        <div v-if="currentStep && currentStep.direction !== 'none'" class="glass-card p-4 fade-up stagger-4">
+          <h3 class="text-xs font-semibold text-text-muted uppercase tracking-widest mb-3">报文信息</h3>
+          <table class="table-glass">
+            <tbody>
+              <tr>
+                <td class="text-text-muted">协议</td>
+                <td>
+                  <span class="px-2 py-0.5 rounded text-xs font-semibold"
+                    :style="{ background: currentStep.packetColor + '20', color: currentStep.packetColor }">
+                    {{ currentStep.protocol }}
+                  </span>
+                </td>
+              </tr>
+              <tr>
+                <td class="text-text-muted">广播</td>
+                <td>
+                  <span v-if="currentStep.broadcast" class="text-accent-warning text-xs">是 (ff:ff:ff:ff:ff:ff)</span>
+                  <span v-else class="text-accent-success text-xs">否 (单播)</span>
+                </td>
+              </tr>
+              <tr>
+                <td class="text-text-muted">源IP</td>
+                <td class="text-accent-primary">{{ currentStep.srcIP }}</td>
+              </tr>
+              <tr>
+                <td class="text-text-muted">目的IP</td>
+                <td class="text-accent-secondary">{{ currentStep.dstIP }}</td>
+              </tr>
+              <tr>
+                <td class="text-text-muted">源MAC</td>
+                <td class="text-accent-warning">{{ currentStep.srcMAC }}</td>
+              </tr>
+              <tr>
+                <td class="text-text-muted">目的MAC</td>
+                <td :class="currentStep.dstMAC === 'ff:ff:ff:ff:ff:ff' ? 'text-accent-warning font-semibold' : 'text-text-secondary'">
+                  {{ currentStep.dstMAC }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- ARP Table with Before/After -->
         <div class="glass-card p-4 fade-up stagger-4">
           <h3 class="text-xs font-semibold text-text-muted uppercase tracking-widest mb-3 flex items-center gap-2">
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
@@ -103,32 +147,52 @@
             </svg>
             ARP缓存表
           </h3>
+
+          <!-- Show before state if different from after -->
+          <div v-if="currentStep && currentStep.arpTableBefore?.length > 0 && arpTableBefore.length > 0" class="mb-2">
+            <div class="text-[10px] text-text-muted mb-1">更新前：</div>
+            <table class="table-glass mb-2 opacity-60">
+              <thead><tr><th>IP</th><th>MAC</th><th>类型</th><th>TTL</th></tr></thead>
+              <tbody>
+                <tr v-for="(item, idx) in arpTableBefore" :key="'b'+idx">
+                  <td class="text-accent-primary text-xs">{{ item.ip }}</td>
+                  <td class="text-text-secondary text-xs" :class="item.mac === '未知' ? 'text-accent-warning' : ''">{{ item.mac }}</td>
+                  <td><span class="px-1 py-0.5 rounded text-[10px]" :class="item.type === '待解析' ? 'bg-accent-warning/15 text-accent-warning' : 'bg-white/5 text-text-muted'">{{ item.type }}</span></td>
+                  <td class="text-text-muted text-xs">{{ item.ttl }}</td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="text-center text-[10px] text-accent-warning mb-2">↓ 更新后</div>
+          </div>
+
           <table class="table-glass">
             <thead>
               <tr>
                 <th>IP地址</th>
                 <th>MAC地址</th>
                 <th>类型</th>
+                <th>TTL</th>
               </tr>
             </thead>
             <tbody>
               <tr v-if="arpTable.length === 0">
-                <td colspan="3" class="text-center text-text-muted py-3 border-dashed border border-border-subtle rounded">暂无数据</td>
+                <td colspan="4" class="text-center text-text-muted py-3 border-dashed border border-border-subtle rounded">暂无数据</td>
               </tr>
-              <tr v-for="(item, idx) in arpTable" :key="idx" :class="{ 'bg-accent-success/10': item.new, 'bg-accent-warning/5': item.type === '待查询' }">
+              <tr v-for="(item, idx) in arpTable" :key="idx" :class="{ 'bg-accent-success/10': item.new, 'bg-accent-warning/5': item.type === '待解析' }">
                 <td class="text-accent-primary">{{ item.ip }}</td>
                 <td :class="item.mac === '未知' ? 'text-accent-warning' : 'text-text-secondary'">{{ item.mac }}</td>
                 <td>
-                  <span class="px-1.5 py-0.5 rounded text-[10px]" :class="item.type === '动态' ? 'bg-accent-success/15 text-accent-success' : item.type === '待查询' ? 'bg-accent-warning/15 text-accent-warning' : 'bg-white/5 text-text-muted'">
+                  <span class="px-1.5 py-0.5 rounded text-[10px]" :class="item.type === '动态' ? 'bg-accent-success/15 text-accent-success' : item.type === '待解析' ? 'bg-accent-warning/15 text-accent-warning' : 'bg-white/5 text-text-muted'">
                     {{ item.type }}
                   </span>
                 </td>
+                <td class="text-text-muted text-xs">{{ item.ttl }}</td>
               </tr>
             </tbody>
           </table>
         </div>
 
-        <!-- MAC Table -->
+        <!-- MAC Table with Before/After -->
         <div class="glass-card p-4 fade-up stagger-5">
           <h3 class="text-xs font-semibold text-text-muted uppercase tracking-widest mb-3 flex items-center gap-2">
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
@@ -139,6 +203,23 @@
             </svg>
             交换机MAC地址表
           </h3>
+
+          <!-- Show before state if different -->
+          <div v-if="currentStep && currentStep.macTableBefore?.length > 0 && macTableBefore.length > 0" class="mb-2">
+            <div class="text-[10px] text-text-muted mb-1">更新前：</div>
+            <table class="table-glass mb-2 opacity-60">
+              <thead><tr><th>MAC</th><th>端口</th><th>类型</th></tr></thead>
+              <tbody>
+                <tr v-for="(item, idx) in macTableBefore" :key="'b'+idx">
+                  <td class="text-text-secondary text-[11px]">{{ item.mac }}</td>
+                  <td class="text-accent-primary text-xs">{{ item.port }}</td>
+                  <td class="text-text-muted text-xs">{{ item.type }}</td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="text-center text-[10px] text-accent-primary mb-2">↓ 更新后</div>
+          </div>
+
           <table class="table-glass">
             <thead>
               <tr>
@@ -180,7 +261,9 @@ const isPlaying = ref(false)
 const speed = ref(1)
 const speeds = [0.5, 1, 2]
 const arpTable = ref([])
+const arpTableBefore = ref([])
 const macTable = ref([])
+const macTableBefore = ref([])
 
 const currentStep = computed(() => {
   if (currentStepIndex.value < 0) return null
@@ -190,10 +273,22 @@ const currentStep = computed(() => {
 const syncTables = () => {
   if (!currentStep.value) return
   arpTable.value = currentStep.value.arpTableAfter || []
+  arpTableBefore.value = currentStep.value.arpTableBefore || []
   macTable.value = currentStep.value.macTableAfter || []
+  macTableBefore.value = currentStep.value.macTableBefore || []
+}
+
+const gotoStep = (idx) => {
+  isPlaying.value = false
+  currentStepIndex.value = idx
+  syncTables()
 }
 
 const handleStart = () => {
+  const ip = targetIP.value.trim()
+  if (!ip) {
+    targetIP.value = '192.168.1.200'
+  }
   handleReset()
   isPlaying.value = true
   currentStepIndex.value = 0
@@ -234,6 +329,8 @@ const handleReset = () => {
   isPlaying.value = false
   currentStepIndex.value = -1
   arpTable.value = []
+  arpTableBefore.value = []
   macTable.value = []
+  macTableBefore.value = []
 }
 </script>

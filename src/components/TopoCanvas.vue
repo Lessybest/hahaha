@@ -1,6 +1,6 @@
 <template>
-  <div class="topo-canvas-wrapper">
-    <svg :viewBox="viewBox" class="w-full h-full min-h-[320px]" ref="svgRef">
+  <div class="topo-canvas-wrapper" ref="wrapperRef">
+    <svg :viewBox="viewBox" class="w-full h-full" :style="{ minHeight: svgMinHeight }" ref="svgRef">
       <!-- Definitions -->
       <defs>
         <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
@@ -17,7 +17,7 @@
           </feMerge>
         </filter>
         <filter id="glow-strong">
-          <feGaussianBlur stdDeviation="6" result="coloredBlur"/>
+          <feGaussianBlur stdDeviation="5" result="coloredBlur"/>
           <feMerge>
             <feMergeNode in="coloredBlur"/>
             <feMergeNode in="SourceGraphic"/>
@@ -32,7 +32,7 @@
           :y1="getNodeY(conn.from)"
           :x2="getNodeX(conn.to)"
           :y2="getNodeY(conn.to)"
-          :stroke="isActiveConnection(conn) ? conn.color || '#00d4ff' : '#333'"
+          :stroke="isActiveConnection(conn) ? (conn.color || '#00d4ff') : '#333'"
           :stroke-width="isActiveConnection(conn) ? 3 : 1.5"
           :stroke-dasharray="isActiveConnection(conn) ? '8 4' : 'none'"
           :stroke-opacity="isActiveConnection(conn) ? 1 : 0.4"
@@ -42,21 +42,21 @@
         <!-- Connection label -->
         <text
           :x="(getNodeX(conn.from) + getNodeX(conn.to)) / 2"
-          :y="(getNodeY(conn.from) + getNodeY(conn.to)) / 2 - 8"
+          :y="(getNodeY(conn.from) + getNodeY(conn.to)) / 2 - 10"
           text-anchor="middle"
-          class="text-[10px] fill-text-muted select-none"
-          :class="{ '!fill-accent-primary font-semibold': isActiveConnection(conn) }"
+          class="text-[10px] select-none"
+          :fill="isActiveConnection(conn) ? (conn.color || '#00d4ff') : '#666'"
+          :class="{ 'font-semibold': isActiveConnection(conn) }"
         >{{ conn.label }}</text>
 
         <!-- Animated packet on active connection -->
-        <g v-if="isActiveConnection(conn) && showPacket">
+        <g v-if="isActiveConnection(conn) && showPacket && currentStepData">
           <circle
             :cx="packetPos.x"
             :cy="packetPos.y"
             r="6"
-            :fill="currentStepData?.packetColor || '#00d4ff'"
+            :fill="currentStepData.packetColor || '#00d4ff'"
             filter="url(#glow-strong)"
-            class="animate-pulse"
           >
             <animate
               attributeName="r"
@@ -65,22 +65,50 @@
               repeatCount="indefinite"
             />
           </circle>
-          <!-- Packet label -->
+          <!-- Packet label with dynamic width -->
           <rect
             :x="packetPos.x + 10"
-            :y="packetPos.y - 10"
-            width="120"
-            height="20"
+            :y="packetPos.y - 12"
+            :width="packetLabelWidth"
+            height="22"
             rx="4"
-            :fill="currentStepData?.packetColor || '#00d4ff'"
+            :fill="currentStepData.packetColor || '#00d4ff'"
             opacity="0.9"
           />
           <text
-            :x="packetPos.x + 70"
-            :y="packetPos.y + 4"
+            :x="packetPos.x + 10 + packetLabelWidth / 2"
+            :y="packetPos.y + 2"
             text-anchor="middle"
             class="text-[10px] fill-white font-medium"
-          >{{ currentStepData?.packetLabel || '' }}</text>
+          >{{ currentStepData.packetLabel || '' }}</text>
+        </g>
+
+        <!-- Broadcast visual: radiating rings from source node -->
+        <g v-if="isActiveConnection(conn) && currentStepData && currentStepData.broadcast && showPacket">
+          <circle
+            :cx="getNodeX(conn.from)"
+            :cy="getNodeY(conn.from)"
+            r="20"
+            fill="none"
+            :stroke="currentStepData.packetColor || '#f59e0b'"
+            stroke-width="2"
+            opacity="0.6"
+          >
+            <animate attributeName="r" values="20;80;20" dur="2s" repeatCount="indefinite"/>
+            <animate attributeName="opacity" values="0.6;0;0.6" dur="2s" repeatCount="indefinite"/>
+          </circle>
+          <circle
+            :cx="getNodeX(conn.from)"
+            :cy="getNodeY(conn.from)"
+            r="20"
+            fill="none"
+            :stroke="currentStepData.packetColor || '#f59e0b'"
+            stroke-width="1.5"
+            opacity="0.4"
+          >
+            <animate attributeName="r" values="20;100;20" dur="2s" repeatCount="indefinite" begin="0.5s"/>
+            <animate attributeName="opacity" values="0.4;0;0.4" dur="2s" repeatCount="indefinite" begin="0.5s"/>
+          </circle>
         </g>
       </g>
 
@@ -93,21 +121,20 @@
         <!-- Node glow effect when highlighted -->
         <circle
           v-if="isHighlighted(node.id)"
-          r="45"
+          r="42"
           fill="none"
           :stroke="currentStepData?.packetColor || '#00d4ff'"
           stroke-width="2"
-          opacity="0.5"
-          class="animate-ping"
-          style="animation-duration: 2s;"
-        />
+          opacity="0.4"
+        >
+          <animate attributeName="r" values="38;48;38" dur="2s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values="0.4;0.1;0.4" dur="2s" repeatCount="indefinite"/>
+        </circle>
 
         <!-- Node background circle -->
         <circle
           r="32"
-          :fill="isHighlighted(node.id)
-            ? `linear-gradient(135deg, ${(currentStepData?.packetColor || '#00d4ff')}40, ${ (currentStepData?.packetColor || '#00d4ff')}15)`
-            : 'rgba(255,255,255,0.05)'"
+          :fill="isHighlighted(node.id) ? 'rgba(0,212,255,0.1)' : 'rgba(255,255,255,0.05)'"
           :stroke="isHighlighted(node.id)
             ? (currentStepData?.packetColor || '#00d4ff')
             : 'rgba(255,255,255,0.15)'"
@@ -147,103 +174,106 @@
           <path d="M14 2 L26 8 v8 c0 8-5 14-12 16 C7 30 2 24 2 16 V8 Z" :fill="isHighlighted(node.id) ? '#00d4ff30' : '#222'" :stroke="isHighlighted(node.id) ? '#00d4ff' : '#888'" stroke-width="1.5"/>
           <path d="M14 10 L14 20 M10 14 L14 10 L18 14" :stroke="isHighlighted(node.id) ? '#00d4ff' : '#888'" stroke-width="1.5" fill="none"/>
         </g>
-        <g v-else-if="node.icon === 'router'" transform="translate(-14, -12)">
-          <circle cx="14" cy="12" r="13" :fill="isHighlighted(node.id) ? '#00d4ff30' : '#222'" :stroke="isHighlighted(node.id) ? '#00d4ff' : '#888'" stroke-width="1.5"/>
-          <line x1="4" y1="6" x2="24" y2="18" :stroke="isHighlighted(node.id) ? '#00d4ff' : '#666'" stroke-width="1.5"/>
-          <line x1="24" y1="6" x2="4" y2="18" :stroke="isHighlighted(node.id) ? '#00d4ff' : '#666'" stroke-width="1.5"/>
-          <circle cx="14" cy="12" r="4" :fill="isHighlighted(node.id) ? '#00d4ff50' : '#333'"/>
-        </g>
-        <g v-else-if="node.icon === 'switch'" transform="translate(-14, -12)">
+        <g v-else-if="node.icon === 'git-branch'" transform="translate(-14, -12)">
           <rect x="0" y="2" width="28" height="20" rx="3" :fill="isHighlighted(node.id) ? '#00d4ff30' : '#222'" :stroke="isHighlighted(node.id) ? '#00d4ff' : '#888'" stroke-width="1.5"/>
           <line x1="6" y1="8" x2="22" y2="8" :stroke="isHighlighted(node.id) ? '#0f0' : '#4a4'" stroke-width="2"/>
           <line x1="6" y1="12" x2="22" y2="12" :stroke="isHighlighted(node.id) ? '#0f0' : '#4a4'" stroke-width="2" stroke-dasharray="3 2"/>
           <line x1="6" y1="16" x2="22" y2="16" :stroke="isHighlighted(node.id) ? '#0f0' : '#4a4'" stroke-width="2"/>
-          <text x="14" y="23" text-anchor="middle" class="text-[7px] fill-text-muted">S</text>
-        </g>
-        <g v-else-if="node.icon === 'laptop'" transform="translate(-14, -11)">
-          <path d="M2 0 h24 a2 2 0 0 1 2 2 v14 a2 2 0 0 1 -2 2 H2 a2 2 0 0 1 -2 -2 V2 a2 2 0 0 1 2 -2z" :fill="isHighlighted(node.id) ? '#00d4ff30' : '#222'" :stroke="isHighlighted(node.id) ? '#00d4ff' : '#888'" stroke-width="1.5"/>
-          <rect x="4" y="3" width="20" height="12" rx="1" fill="#111"/>
-          <path d="M-2 19 h32 l-3 4 H1 z" :fill="isHighlighted(node.id) ? '#00d4ff40' : '#333'" :stroke="isHighlighted(node.id) ? '#00d4ff' : '#666'" stroke-width="1"/>
-        </g>
-        <g v-else-if="node.icon === 'cloud'" transform="translate(-16, -12)">
-          <path d="M16 6 A8 8 0 0 0 0 10 A6 6 0 0 0 4 22 h24 a6 6 0 0 0 2 -12 A8 8 0 0 0 16 6z" :fill="isHighlighted(node.id) ? '#00d4ff20' : '#181818'" :stroke="isHighlighted(node.id) ? '#00d4ff' : '#888'" stroke-width="1.5"/>
         </g>
         <g v-else transform="translate(-14, -12)">
           <circle r="20" :fill="isHighlighted(node.id) ? '#00d4ff30' : '#222'" :stroke="isHighlighted(node.id) ? '#00d4ff' : '#888'" stroke-width="1.5"/>
           <text x="0" y="4" text-anchor="middle" class="text-sm font-bold" :fill="isHighlighted(node.id) ? '#00d4ff' : '#ccc'">{{ node.label?.[0] || '?' }}</text>
         </g>
 
-        <!-- Node label -->
+        <!-- Node label (always shown) -->
         <text
           x="0"
-          y="48"
+          y="46"
           text-anchor="middle"
-          class="text-xs font-semibold transition-colors duration-300"
+          class="text-xs font-semibold"
           :fill="isHighlighted(node.id) ? (currentStepData?.packetColor || '#00d4ff') : '#ccc'"
         >{{ node.label }}</text>
+
+        <!-- Sublabel lines (split by \n to avoid overlap) -->
         <text
+          v-for="(line, li) in getSublabelLines(node.sublabel)"
+          :key="node.id + '-sub-' + li"
           x="0"
-          y="62"
+          :y="60 + li * 13"
           text-anchor="middle"
-          class="text-[10px] fill-text-muted"
-        >{{ node.sublabel }}</text>
+          class="text-[10px]"
+          :fill="isHighlighted(node.id) ? '#aaa' : '#666'"
+        >{{ line }}</text>
       </g>
     </svg>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 
 const props = defineProps({
-  nodes: {
-    type: Array,
-    default: () => []
-  },
-  connections: {
-    type: Array,
-    default: () => []
-  },
-  currentStep: {
-    type: Object,
-    default: null
-  }
+  nodes: { type: Array, default: () => [] },
+  connections: { type: Array, default: () => [] },
+  currentStep: { type: Object, default: null }
 })
 
 const svgRef = ref(null)
+const wrapperRef = ref(null)
 const showPacket = ref(false)
 const packetProgress = ref(0)
+const wrapperWidth = ref(800)
 
-// Auto-calculate viewBox from node positions
+// Dynamic packet label width based on text length
+const packetLabelWidth = computed(() => {
+  const label = props.currentStep?.packetLabel || ''
+  return Math.max(80, label.length * 8 + 16)
+})
+
+// Dynamic SVG min-height based on node positions
+const svgMinHeight = computed(() => {
+  if (!props.nodes.length) return '320px'
+  const maxY = Math.max(...props.nodes.map(n => n.y))
+  // Need space for labels below nodes
+  const hasSublabel = props.nodes.some(n => n.sublabel && n.sublabel.includes('\n'))
+  const bottomSpace = hasSublabel ? 90 : 70
+  return Math.max(320, maxY + bottomSpace) + 'px'
+})
+
+// Auto-calculate viewBox from node positions with padding
 const viewBox = computed(() => {
   if (!props.nodes.length) return '0 0 800 500'
   const xs = props.nodes.map(n => n.x)
   const ys = props.nodes.map(n => n.y)
-  const minX = Math.min(...xs) - 80
-  const maxX = Math.max(...xs) + 80
-  const minY = Math.min(...ys) - 80
-  const maxY = Math.max(...ys) + 100 // extra space for labels below
+  const padX = 80
+  const padYTop = 70
+  const padYBottom = 90
+  const minX = Math.min(...xs) - padX
+  const maxX = Math.max(...xs) + padX
+  const minY = Math.min(...ys) - padYTop
+  const maxY = Math.max(...ys) + padYBottom
   return `${minX} ${minY} ${maxX - minX} ${maxY - minY}`
 })
 
-// Current step data for coloring
 const currentStepData = computed(() => props.currentStep)
 
-// Check if a connection is active (highlighted by current step)
+// Split sublabel by \n into separate lines
+const getSublabelLines = (sublabel) => {
+  if (!sublabel) return []
+  return sublabel.split('\n').filter(l => l.trim())
+}
+
 const isActiveConnection = (conn) => {
   if (!props.currentStep) return false
   const highlights = props.currentStep.highlightConnections || []
   return highlights.includes(`${conn.from}-${conn.to}`) || highlights.includes(`${conn.to}-${conn.from}`)
 }
 
-// Check if a node is highlighted
 const isHighlighted = (nodeId) => {
   if (!props.currentStep) return false
-  const highlights = props.currentStep.highlightNodes || []
-  return highlights.includes(nodeId)
+  return (props.currentStep.highlightNodes || []).includes(nodeId)
 }
 
-// Get node X/Y position
 const getNodeX = (nodeId) => {
   const node = props.nodes.find(n => n.id === nodeId)
   return node ? node.x : 0
@@ -264,7 +294,6 @@ const packetPos = computed(() => {
   const toNode = props.nodes.find(n => n.id === activeConn.to)
   if (!fromNode || !toNode) return { x: 0, y: 0 }
 
-  // Determine direction based on step direction
   const t = props.currentStep.direction === 'left'
     ? 1 - packetProgress.value
     : packetProgress.value
@@ -280,14 +309,10 @@ let packetAnimTimer = null
 
 watch(() => props.currentStep, (newVal, oldVal) => {
   if (newVal && newVal !== oldVal) {
-    // Start packet animation
     showPacket.value = true
     packetProgress.value = 0
-
-    // Clear existing animation
     if (packetAnimTimer) clearInterval(packetAnimTimer)
 
-    // Animate from 0 to 1 over 1500ms
     const startTime = Date.now()
     const duration = 1500
     packetAnimTimer = setInterval(() => {
@@ -296,7 +321,6 @@ watch(() => props.currentStep, (newVal, oldVal) => {
       if (elapsed >= duration) {
         clearInterval(packetAnimTimer)
         packetAnimTimer = null
-        // Keep packet visible for a moment then fade
         setTimeout(() => {
           if (props.currentStep === newVal) {
             showPacket.value = false
@@ -309,6 +333,17 @@ watch(() => props.currentStep, (newVal, oldVal) => {
     packetProgress.value = 0
   }
 }, { immediate: true })
+
+// Track wrapper width for responsive behavior
+onMounted(() => {
+  if (wrapperRef.value) {
+    const ro = new ResizeObserver(entries => {
+      wrapperWidth.value = entries[0].contentRect.width
+    })
+    ro.observe(wrapperRef.value)
+    onUnmounted(() => ro.disconnect())
+  }
+})
 </script>
 
 <style scoped>
