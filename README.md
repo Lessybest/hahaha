@@ -250,8 +250,8 @@ ARP（Address Resolution Protocol，地址解析协议）模块展示主机 A（
 │   │       ├── TcpState.vue             # TCP 连接状态组件
 │   │       └── MessageLog.vue           # 通信日志组件
 │   ├── data/                          # 静态协议数据
-│   │   ├── dns.js                     # DNS 协议 8 步流程数据
-│   │   ├── arp.js                     # ARP 协议 7 步流程数据
+│   │   ├── dns.js                     # DNS 协议数据（缓存未命中9步+缓存命中2步）
+│   │   ├── arp.js                     # ARP 协议 8 步流程数据（含结果汇总）
 │   │   └── comprehensiveSteps.js      # 综合场景 8 步流程数据
 │   ├── router/
 │   │   └── index.js                    # Vue Router 配置，5 条路由
@@ -615,8 +615,8 @@ ARP 协议页面展示 ARP 缓存表、交换机 MAC 表的动态变化，以及
 
 | 课程要求 | 实现情况 | 说明 |
 |---------|---------|------|
-| DNS 协议可视化 | ✅ 已实现 | 完整 8 步 DNS 递归查询流程，SVG 拓扑+数据包动画+缓存表 |
-| ARP 协议可视化 | ✅ 已实现 | 完整 7 步 ARP 生命周期，ARP 表+交换机 MAC 表动态联动 |
+| DNS 协议可视化 | ✅ 已实现 | 缓存未命中9步递归查询+缓存命中2步，SVG拓扑+数据包动画+Before/After缓存表对比 |
+| ARP 协议可视化 | ✅ 已实现 | 完整8步ARP生命周期(含结果汇总)，ARP表+MAC表Before/After动态对比 |
 | 综合网络场景模拟 | ✅ 已实现 | H1 访问 www.abc.com 全流程 8 步，ARP 表+MAC 表+DNS 缓存表三表联动 |
 | TCP/IP 五层模型知识展示 | ✅ 已实现 | 5 个层级预置数据，17 个知识点，页面按层分类展示 |
 | 知识点增删改查 | ✅ 已实现 | POST 新增、PUT 编辑、DELETE 删除、GET 查询，实时落库 |
