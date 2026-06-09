@@ -128,98 +128,113 @@
         </div>
       </div>
       <div class="glass-card overflow-hidden" style="height: 750px; cursor: grab;" @mouseleave="draggedNode = null; isPanning = false">
-        <svg ref="graphRef" class="w-full h-full" viewBox="0 0 900 520" preserveAspectRatio="xMidYMid meet" @mousemove="onGraphMouseMove" @mouseup="onGraphMouseUp" @mousedown="onGraphMouseDown" @mouseleave="draggedNode = null; isPanning = false" @wheel="onWheel($event)" style="user-select:none">
+        <svg ref="graphRef" class="w-full h-full" viewBox="0 0 900 520" preserveAspectRatio="xMidYMid meet" @mousemove="onGraphMouseMove" @mouseup="onGraphMouseUp" @mousedown="onGraphMouseDown" @mouseleave="draggedNode = null; isPanning = false" @wheel="onWheel($event)" style="user-select:none;background:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2240%22 height=%2240%22><circle cx=%222%22 cy=%222%22 r=%221%22 fill=%22rgba(255,255,255,0.04)%22/></svg>') repeat">
           <g :transform="graphTransform">
           <defs>
-            <marker id="arrow-default" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-              <path d="M0,0 L0,6 L8,3 z" fill="rgba(255,255,255,0.3)"/>
+            <!-- 箭头 -->
+            <marker id="arrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+              <path d="M0,0 L0,7 L7,3.5 z" fill="rgba(255,255,255,0.35)"/>
             </marker>
+            <!-- 发光滤镜 -->
+            <filter id="glow">
+              <feGaussianBlur stdDeviation="3" result="blur"/>
+              <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+            <filter id="softShadow">
+              <feDropShadow dx="0" dy="1" stdDeviation="2" flood-color="rgba(0,0,0,0.4)"/>
+            </filter>
           </defs>
 
-          <!-- Layer nodes (big, pill-shaped) -->
-          <g v-for="node in graphNodes.filter(n => n.isLayer)" :key="'ln_' + node.id">
-            <!-- 胶囊背景 -->
-            <rect
-              :x="node.x - 70" :y="node.y - 22"
-              width="140" height="44" rx="22"
-              :fill="node.color + '20'"
-              :stroke="node.color + '70'"
-              stroke-width="2"
-            />
-            <text
-              :x="node.x" :y="node.y + 5"
-              text-anchor="middle" dominant-baseline="middle"
-              :fill="node.color" font-size="14" font-weight="700" font-family="Inter"
-            >{{ node.label }}</text>
-          </g>
-          <!-- Knowledge node links (from layer to knowledge) -->
+          <!-- ── 连边（曲线弧线） ── -->
           <g v-for="link in graphLinks" :key="'lk_' + link.source + '_' + link.target">
-            <line
-              :x1="getNodeX(link.source)" :y1="getNodeY(link.source) + 30"
-              :x2="getNodeX(link.target)" :y2="getNodeY(link.target) - 40"
-              stroke="rgba(255,255,255,0.10)"
-              stroke-width="1.2"
-              stroke-dasharray="6 4"
-              marker-end="url(#arrow-default)"
+            <path
+              :d="'M' + getNodeX(link.source) + ',' + (getNodeY(link.source) + 28) + ' Q' + getNodeX(link.source) + ',' + ((getNodeY(link.source) + getNodeY(link.target)) / 2) + ' ' + getNodeX(link.target) + ',' + (getNodeY(link.target) - 36)"
+              fill="none"
+              :stroke="getNodeColorById(link.target) || 'rgba(255,255,255,0.08)'"
+              stroke-width="1"
+              stroke-opacity="0.25"
+              marker-end="url(#arrow)"
             />
           </g>
-          <!-- Knowledge nodes (non-layer) -->
+
+          <!-- ── 层级节点（磨砂胶囊） ── -->
+          <g v-for="node in graphNodes.filter(n => n.isLayer)" :key="'ln_' + node.id" filter="url(#softShadow)">
+            <!-- 外发光 -->
+            <rect :x="node.x - 72" :y="node.y - 20" width="144" height="40" rx="20"
+              :fill="node.color + '15'" />
+            <!-- 主体 -->
+            <rect :x="node.x - 68" :y="node.y - 18" width="136" height="36" rx="18"
+              fill="rgba(20,20,30,0.9)"
+              :stroke="node.color" stroke-width="1.5" stroke-opacity="0.5" />
+            <!-- 左侧色条 -->
+            <rect :x="node.x - 68" :y="node.y - 18" width="3" height="36" rx="1.5"
+              :fill="node.color" opacity="0.8" />
+            <!-- 标签文字 -->
+            <text :x="node.x - 20" :y="node.y + 4"
+              text-anchor="middle" dominant-baseline="middle"
+              fill="#e8e8f5" font-size="13" font-weight="600" font-family="Inter" letter-spacing="0.5">
+              {{ node.label }}
+            </text>
+          </g>
+
+          <!-- ── 知识点节点 ── -->
           <g
             v-for="node in graphNodes.filter(n => !n.isLayer)"
             :key="'kn_' + node.id"
             class="cursor-pointer"
             @mousedown.stop="startDrag(node, $event)"
-            @click="selectedGraphNode = selectedGraphNode === node.id ? null : node.id"
+            @click.stop="selectedGraphNode = selectedGraphNode === node.id ? null : node.id"
             @mouseenter="hoveredNode = node.id"
             @mouseleave="hoveredNode = null"
           >
-            <!-- 选中光晕 -->
-            <circle
-              v-if="nodeHighlight(node.id)"
-              :cx="node.x" :cy="node.y" r="46"
-              :fill="node.color + '10'"
-              :stroke="node.color + '25'"
-              stroke-width="1"
-            />
-            <!-- 主圆圈 -->
-            <circle
-              :cx="node.x" :cy="node.y" r="34"
-              fill="#111118"
-              :stroke="node.color"
-              stroke-width="1.8"
-              :opacity="hoveredNode && hoveredNode !== node.id ? 0.45 : 1"
-            />
-            <!-- 文字背景条 -->
-            <rect
-              :x="node.x - 56" :y="node.y + 42"
-              width="112" height="22" rx="5"
-              :fill="node.color + '15'"
-            />
-            <!-- 文字 -->
-            <text
-              :x="node.x" :y="node.y + 56"
+            <!-- 呼吸光晕（选中/悬停） -->
+            <circle v-if="nodeHighlight(node.id)"
+              :cx="node.x" :cy="node.y" r="44"
+              :fill="node.color + '12'" filter="url(#glow)" />
+            <!-- 外圈 -->
+            <circle :cx="node.x" :cy="node.y" r="30"
+              fill="none"
+              :stroke="node.color" stroke-width="1.2" stroke-opacity="0.35" />
+            <!-- 主体圆 -->
+            <circle :cx="node.x" :cy="node.y" r="24"
+              fill="rgba(16,16,24,0.95)"
+              :stroke="node.color" stroke-width="2"
+              :stroke-opacity="hoveredNode && hoveredNode !== node.id ? 0.3 : 0.8" />
+            <!-- 中心亮点 -->
+            <circle :cx="node.x" :cy="node.y" r="3.5"
+              :fill="node.color" opacity="0.85" />
+            <!-- 标签背景 -->
+            <rect :x="node.x - 48" :y="node.y + 36" width="96" height="19" rx="9.5"
+              fill="rgba(20,20,30,0.82)"
+              :stroke="node.color" stroke-width="0.5" stroke-opacity="0.2" />
+            <!-- 标签文字 -->
+            <text :x="node.x" :y="node.y + 49"
               text-anchor="middle" dominant-baseline="middle"
-              :fill="node.color" font-size="11" font-weight="600" font-family="Inter"
-            >{{ node.label.length > 14 ? node.label.slice(0, 13) + '…' : node.label }}</text>
+              :fill="node.color" font-size="9.5" font-weight="500" font-family="Inter" letter-spacing="0.3"
+            >{{ node.label.length > 12 ? node.label.slice(0, 11) + '…' : node.label }}</text>
           </g>
-          <!-- Tooltip -->
-          <g v-if="tooltipNode" transform="translate(0, 0)">
-            <rect
-              :x="tooltipNode.x - 100" :y="tooltipNode.y - 95"
-              width="200" height="60"
-              rx="8"
-              fill="#1a1a24"
-              stroke="rgba(255,255,255,0.1)"
-              stroke-width="1"
-            />
-            <text :x="tooltipNode.x" :y="tooltipNode.y - 73" text-anchor="middle" fill="#f0f0f5" font-size="13" font-weight="600" font-family="Inter">
+
+          <!-- ── Tooltip 信息卡 ── -->
+          <g v-if="tooltipNode" filter="url(#softShadow)">
+            <rect :x="tooltipNode.x - 105" :y="tooltipNode.y - 90"
+              width="210" height="72" rx="10"
+              fill="rgba(24,24,38,0.97)"
+              :stroke="getNodeColorById(tooltipNode.id) || '#666'" stroke-width="1" stroke-opacity="0.4" />
+            <!-- 标题线 -->
+            <line :x1="tooltipNode.x - 90" :y1="tooltipNode.y - 72"
+              :x2="tooltipNode.x + 90" :y2="tooltipNode.y - 72"
+              :stroke="getNodeColorById(tooltipNode.id) || '#666'" stroke-width="1" stroke-opacity="0.15" />
+            <text :x="tooltipNode.x" :y="tooltipNode.y - 64"
+              text-anchor="middle" fill="#f0f0f8" font-size="12" font-weight="600" font-family="Inter">
               {{ tooltipNode.label }}
             </text>
-            <text :x="tooltipNode.x" :y="tooltipNode.y - 53" text-anchor="middle" fill="rgba(240,240,245,0.6)" font-size="11" font-family="Inter">
+            <text :x="tooltipNode.x" :y="tooltipNode.y - 48"
+              text-anchor="middle" :fill="getNodeColorById(tooltipNode.id) || '#888'" font-size="10" font-family="Inter">
               {{ tooltipNode.layer_name }}
             </text>
-            <text :x="tooltipNode.x" :y="tooltipNode.y - 37" text-anchor="middle" fill="rgba(240,240,245,0.3)" font-size="9" font-family="Inter">
-              {{ (tooltipNode.content || '').slice(0, 40) }}…
+            <text :x="tooltipNode.x" :y="tooltipNode.y - 34"
+              text-anchor="middle" fill="rgba(200,200,210,0.5)" font-size="8" font-family="Inter">
+              {{ (tooltipNode.content || '').slice(0, 44) }}…
             </text>
           </g>
           </g>
@@ -515,6 +530,10 @@ const buildGraphData = () => {
 
 const getNodeX = (id) => graphNodes.value.find(n => n.id === id)?.x || 0
 const getNodeY = (id) => graphNodes.value.find(n => n.id === id)?.y || 0
+const getNodeColorById = (id) => {
+  const node = graphNodes.value.find(n => n.id === id)
+  return node?.color || '#888'
+}
 
 const nodeHighlight = (id) => selectedGraphNode.value === id || hoveredNode.value === id
 
