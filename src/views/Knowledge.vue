@@ -123,11 +123,12 @@
           <div class="flex gap-2">
             <button class="btn-ghost text-xs" @click="graphLayout = 'layered'" :class="{ 'text-accent-primary': graphLayout === 'layered' }">分层布局</button>
             <button class="btn-ghost text-xs" @click="graphLayout = 'force'" :class="{ 'text-accent-primary': graphLayout === 'force' }">力导向布局</button>
+            <button class="btn-ghost text-xs" @click="resetGraphView" title="重置视图">🔄 重置</button>
           </div>
         </div>
       </div>
-      <div class="glass-card overflow-hidden" style="height: 600px; cursor: grab;" @mouseleave="isPanning = false; draggedNode = null">
-        <svg ref="graphRef" class="w-full h-full" @mousemove="onGraphMouseMove" @mouseup="onGraphMouseUp" @mousedown="onGraphMouseDown" @wheel="onWheel($event)">
+      <div class="glass-card overflow-hidden" style="height: 750px; cursor: grab;" @mouseleave="draggedNode = null; isPanning = false">
+        <svg ref="graphRef" class="w-full h-full" viewBox="0 0 900 520" preserveAspectRatio="xMidYMid meet" @mousemove="onGraphMouseMove" @mouseup="onGraphMouseUp" @mousedown="onGraphMouseDown" @mouseleave="draggedNode = null; isPanning = false" @wheel="onWheel($event)" style="user-select:none">
           <g :transform="graphTransform">
           <defs>
             <marker id="arrow-default" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
@@ -156,11 +157,11 @@
               stroke-width="1"
             />
             <text
-              :x="node.x" y="-15"
+              :x="node.x" y="-18"
               text-anchor="middle"
               :fill="node.color"
-              font-size="11"
-              font-weight="600"
+              font-size="12"
+              font-weight="700"
               font-family="Inter"
             >{{ node.label }}</text>
           </g>
@@ -175,20 +176,20 @@
             @mouseleave="hoveredNode = null"
           >
             <circle
-              :cx="node.x" :cy="node.y" r="nodeHighlight(node.id) ? 32 : 26"
+              :cx="node.x" :cy="node.y" r="nodeHighlight(node.id) ? 42 : 34"
               :fill="nodeHighlight(node.id) ? node.color + '30' : '#111118'"
               :stroke="node.color"
-              :stroke-width="nodeHighlight(node.id) ? 2 : 1.5"
+              :stroke-width="nodeHighlight(node.id) ? 2.5 : 1.5"
               :opacity="hoveredNode && hoveredNode !== node.id ? 0.6 : 1"
             />
             <text
-              :x="node.x" :y="node.y + 4"
+              :x="node.x" :y="node.y + 5"
               text-anchor="middle"
               :fill="node.color"
-              font-size="10"
-              font-weight="600"
+              font-size="12"
+              font-weight="700"
               font-family="Inter"
-            >{{ node.label.length > 8 ? node.label.slice(0, 7) + '…' : node.label }}</text>
+            >{{ node.label.length > 10 ? node.label.slice(0, 9) + '…' : node.label }}</text>
           </g>
           <!-- Tooltip -->
           <g v-if="tooltipNode" transform="translate(0, 0)">
@@ -200,10 +201,10 @@
               stroke="rgba(255,255,255,0.1)"
               stroke-width="1"
             />
-            <text :x="tooltipNode.x" :y="tooltipNode.y - 58" text-anchor="middle" fill="#f0f0f5" font-size="12" font-weight="600" font-family="Inter">
+            <text :x="tooltipNode.x" :y="tooltipNode.y - 58" text-anchor="middle" fill="#f0f0f5" font-size="13" font-weight="600" font-family="Inter">
               {{ tooltipNode.label }}
             </text>
-            <text :x="tooltipNode.x" :y="tooltipNode.y - 38" text-anchor="middle" fill="rgba(240,240,245,0.5)" font-size="10" font-family="Inter">
+            <text :x="tooltipNode.x" :y="tooltipNode.y - 38" text-anchor="middle" fill="rgba(240,240,245,0.6)" font-size="11" font-family="Inter">
               {{ tooltipNode.layer_name }}
             </text>
             <text :x="tooltipNode.x" :y="tooltipNode.y - 22" text-anchor="middle" fill="rgba(240,240,245,0.3)" font-size="9" font-family="Inter">
@@ -277,7 +278,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import axios from 'axios'
 
 const layers = ref([])
@@ -303,7 +304,18 @@ const api = axios.create({ baseURL: '/api' })
 onMounted(async () => {
   await loadLayers()
   await loadKnowledge()
+  window.addEventListener('mouseup', onWindowMouseUp)
 })
+
+onUnmounted(() => {
+  window.removeEventListener('mouseup', onWindowMouseUp)
+})
+
+// Global mouseup — prevents sticky drag when mouse leaves SVG
+const onWindowMouseUp = () => {
+  draggedNode.value = null
+  isPanning.value = false
+}
 
 const loadLayers = async () => {
   try {
@@ -515,17 +527,25 @@ watch([activeLayer, knowledge, graphLayout], () => {
   if (activeLayer.value === 'graph') buildGraphData()
 })
 
-// Drag
+// ── Drag ──────────────────────────────────────────────
 const draggedNode = ref(null)
 const startDrag = (node, e) => {
   if (e.button !== 0) return
   draggedNode.value = node
+  isPanning.value = false
   e.stopPropagation()
   e.preventDefault()
 }
 
+// Reset graph view
+const resetGraphView = () => {
+  graphScale.value = 1
+  graphOffset.value = { x: 0, y: 0 }
+}
+
 const onGraphMouseUp = () => { 
   draggedNode.value = null 
+  isPanning.value = false
 }
 
 const onGraphMouseMove = (e) => {
