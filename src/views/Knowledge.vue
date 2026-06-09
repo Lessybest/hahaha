@@ -135,79 +135,90 @@
               <path d="M0,0 L0,6 L8,3 z" fill="rgba(255,255,255,0.3)"/>
             </marker>
           </defs>
-          <!-- Links -->
-          <line
-            v-for="link in graphLinks"
-            :key="`${link.source}-${link.target}`"
-            :x1="getNodeX(link.source)" :y1="getNodeY(link.source)"
-            :x2="getNodeX(link.target)" :y2="getNodeY(link.target)"
-            stroke="rgba(255,255,255,0.15)"
-            stroke-width="1"
-            stroke-dasharray="4 3"
-            marker-end="url(#arrow-default)"
-          />
-          <!-- Layer labels -->
-          <g v-for="node in graphNodes.filter(n => n.isLayer)" :key="node.id">
+
+          <!-- Layer nodes (big, pill-shaped) -->
+          <g v-for="node in graphNodes.filter(n => n.isLayer)" :key="'ln_' + node.id">
+            <!-- 胶囊背景 -->
             <rect
-              :x="node.x - 40" :y="node.y - 30"
-              width="80" height="22"
-              rx="11"
-              :fill="node.color + '15'"
-              :stroke="node.color + '40'"
-              stroke-width="1"
+              :x="node.x - 70" :y="node.y - 22"
+              width="140" height="44" rx="22"
+              :fill="node.color + '20'"
+              :stroke="node.color + '70'"
+              stroke-width="2"
             />
             <text
-              :x="node.x" y="-18"
-              text-anchor="middle"
-              :fill="node.color"
-              font-size="12"
-              font-weight="700"
-              font-family="Inter"
+              :x="node.x" :y="node.y + 5"
+              text-anchor="middle" dominant-baseline="middle"
+              :fill="node.color" font-size="14" font-weight="700" font-family="Inter"
             >{{ node.label }}</text>
           </g>
-          <!-- Nodes -->
+          <!-- Knowledge node links (from layer to knowledge) -->
+          <g v-for="link in graphLinks" :key="'lk_' + link.source + '_' + link.target">
+            <line
+              :x1="getNodeX(link.source)" :y1="getNodeY(link.source) + 30"
+              :x2="getNodeX(link.target)" :y2="getNodeY(link.target) - 40"
+              stroke="rgba(255,255,255,0.10)"
+              stroke-width="1.2"
+              stroke-dasharray="6 4"
+              marker-end="url(#arrow-default)"
+            />
+          </g>
+          <!-- Knowledge nodes (non-layer) -->
           <g
-            v-for="node in graphNodes"
-            :key="node.id"
+            v-for="node in graphNodes.filter(n => !n.isLayer)"
+            :key="'kn_' + node.id"
             class="cursor-pointer"
             @mousedown.stop="startDrag(node, $event)"
             @click="selectedGraphNode = selectedGraphNode === node.id ? null : node.id"
             @mouseenter="hoveredNode = node.id"
             @mouseleave="hoveredNode = null"
           >
+            <!-- 选中光晕 -->
             <circle
-              :cx="node.x" :cy="node.y" r="nodeHighlight(node.id) ? 42 : 34"
-              :fill="nodeHighlight(node.id) ? node.color + '30' : '#111118'"
-              :stroke="node.color"
-              :stroke-width="nodeHighlight(node.id) ? 2.5 : 1.5"
-              :opacity="hoveredNode && hoveredNode !== node.id ? 0.6 : 1"
+              v-if="nodeHighlight(node.id)"
+              :cx="node.x" :cy="node.y" r="46"
+              :fill="node.color + '10'"
+              :stroke="node.color + '25'"
+              stroke-width="1"
             />
+            <!-- 主圆圈 -->
+            <circle
+              :cx="node.x" :cy="node.y" r="34"
+              fill="#111118"
+              :stroke="node.color"
+              stroke-width="1.8"
+              :opacity="hoveredNode && hoveredNode !== node.id ? 0.45 : 1"
+            />
+            <!-- 文字背景条 -->
+            <rect
+              :x="node.x - 56" :y="node.y + 42"
+              width="112" height="22" rx="5"
+              :fill="node.color + '15'"
+            />
+            <!-- 文字 -->
             <text
-              :x="node.x" :y="node.y + 5"
-              text-anchor="middle"
-              :fill="node.color"
-              font-size="12"
-              font-weight="700"
-              font-family="Inter"
-            >{{ node.label.length > 10 ? node.label.slice(0, 9) + '…' : node.label }}</text>
+              :x="node.x" :y="node.y + 56"
+              text-anchor="middle" dominant-baseline="middle"
+              :fill="node.color" font-size="11" font-weight="600" font-family="Inter"
+            >{{ node.label.length > 14 ? node.label.slice(0, 13) + '…' : node.label }}</text>
           </g>
           <!-- Tooltip -->
           <g v-if="tooltipNode" transform="translate(0, 0)">
             <rect
-              :x="tooltipNode.x - 100" :y="tooltipNode.y - 80"
+              :x="tooltipNode.x - 100" :y="tooltipNode.y - 95"
               width="200" height="60"
               rx="8"
               fill="#1a1a24"
               stroke="rgba(255,255,255,0.1)"
               stroke-width="1"
             />
-            <text :x="tooltipNode.x" :y="tooltipNode.y - 58" text-anchor="middle" fill="#f0f0f5" font-size="13" font-weight="600" font-family="Inter">
+            <text :x="tooltipNode.x" :y="tooltipNode.y - 73" text-anchor="middle" fill="#f0f0f5" font-size="13" font-weight="600" font-family="Inter">
               {{ tooltipNode.label }}
             </text>
-            <text :x="tooltipNode.x" :y="tooltipNode.y - 38" text-anchor="middle" fill="rgba(240,240,245,0.6)" font-size="11" font-family="Inter">
+            <text :x="tooltipNode.x" :y="tooltipNode.y - 53" text-anchor="middle" fill="rgba(240,240,245,0.6)" font-size="11" font-family="Inter">
               {{ tooltipNode.layer_name }}
             </text>
-            <text :x="tooltipNode.x" :y="tooltipNode.y - 22" text-anchor="middle" fill="rgba(240,240,245,0.3)" font-size="9" font-family="Inter">
+            <text :x="tooltipNode.x" :y="tooltipNode.y - 37" text-anchor="middle" fill="rgba(240,240,245,0.3)" font-size="9" font-family="Inter">
               {{ (tooltipNode.content || '').slice(0, 40) }}…
             </text>
           </g>
@@ -361,35 +372,39 @@ const buildGraphData = () => {
   const layerMap = {}
   graphLayers.value.forEach(l => { layerMap[l.id] = l })
 
+  const svgW = 900, svgH = 500
+
   if (graphLayout.value === 'layered') {
-    // Layered layout: layers in columns, knowledge nodes around layer nodes
-    const layerSpacing = 180
+    // ── 分层布局：每层一列，知识点节点整齐排在层级节点下方 ──
+    const layerSpacing = Math.min(200, (svgW - 200) / Math.max(graphLayers.value.length - 1, 1))
     const startX = 100
-    
+    const layerY = 80
+    const kNodeStartY = 170
+    const kNodeGapY = 100   // 纵向间距
+    const maxPerCol = 7       // 每列最多显7个，超出向下延伸
+
     graphLayers.value.forEach((l, li) => {
-      const layerX = startX + li * layerSpacing
-      const layerY = 80
-      
-      // Layer node
+      const lx = startX + li * layerSpacing
+
+      // ── 层级节点（大号胶囊形）──
       nodes.push({
         id: 'layer_' + l.id,
         label: l.name,
         layer_name: l.name,
         layer_id: l.id,
         color: l.color,
-        x: layerX,
+        x: lx,
         y: layerY,
-        baseX: layerX,
+        baseX: lx,
         baseY: layerY,
         isLayer: true,
       })
-      
-      // Knowledge nodes for this layer
-      const layerKnowledge = knowledge.value.filter(k => k.layer_id === l.id)
-      const nodeSpacing = 80
-      const totalHeight = (layerKnowledge.length - 1) * nodeSpacing
-      
-      layerKnowledge.forEach((k, ki) => {
+
+      // ── 该层知识点：整齐列阵 ──
+      const kList = knowledge.value.filter(k => k.layer_id === l.id)
+      kList.forEach((k, ki) => {
+        const col = Math.floor(ki / maxPerCol)
+        const row = ki % maxPerCol
         nodes.push({
           id: k.id,
           label: k.title,
@@ -397,22 +412,23 @@ const buildGraphData = () => {
           layer_id: k.layer_id,
           layer_name: l.name,
           color: l.color,
-          x: layerX + (Math.random() - 0.5) * 20,
-          y: 150 + ki * nodeSpacing - totalHeight / 2 + (Math.random() - 0.5) * 20,
-          baseX: layerX,
-          baseY: 150 + ki * nodeSpacing - totalHeight / 2,
+          x: lx + col * 36,
+          y: kNodeStartY + row * kNodeGapY,
+          baseX: lx,
+          baseY: kNodeStartY + row * kNodeGapY,
           isLayer: false,
         })
-        
         links.push({ source: 'layer_' + l.id, target: k.id, layer: l.name })
       })
     })
   } else {
-    // Force-directed layout
+    // ── 力导向布局：正确模拟（斥力 + 引力 + 冷却） ──
     const allNodes = []
-    
-    // Add layer nodes
+
+    // 层级节点：均匀分布在椭圆上
+    const lc = Math.max(graphLayers.value.length, 1)
     graphLayers.value.forEach((l, li) => {
+      const ang = (2 * Math.PI * li) / lc - Math.PI / 2
       allNodes.push({
         id: 'layer_' + l.id,
         label: l.name,
@@ -420,84 +436,79 @@ const buildGraphData = () => {
         layer_id: l.id,
         color: l.color,
         isLayer: true,
+        x: svgW / 2 + 260 * Math.cos(ang),
+        y: svgH / 2 + 150 * Math.sin(ang),
       })
     })
-    
-    // Add knowledge nodes
+
+    // 知识点节点：初始位置靠近所属层级节点
     knowledge.value.forEach(k => {
-      const layer = layerMap[k.layer_id]
+      const ln = allNodes.find(n => n.id === 'layer_' + k.layer_id)
       allNodes.push({
         id: k.id,
         label: k.title,
         content: k.content,
         layer_id: k.layer_id,
-        layer_name: layer?.name || '',
-        color: layer?.color || '#fff',
+        layer_name: ln?.layer_name || '',
+        color: ln?.color || '#888',
         isLayer: false,
+        x: (ln?.x || svgW / 2) + (Math.random() - 0.5) * 80,
+        y: (ln?.y || svgH / 2) + (Math.random() - 0.5) * 80,
       })
     })
-    
-    // Simple force-directed layout
-    const width = 900
-    const height = 500
-    
-    // Initialize positions
-    allNodes.forEach((n, i) => {
-      n.x = width / 2 + (Math.random() - 0.5) * 100
-      n.y = height / 2 + (Math.random() - 0.5) * 100
-    })
-    
-    // Simple force simulation (a few iterations)
-    for (let iter = 0; iter < 50; iter++) {
-      // Repulsion between all nodes
+
+    // ── 力模拟（200次迭代，alpha冷却） ──
+    let alpha = 1.0
+    const alphaDecay = 0.97
+    const repulse = 900    // 斥力强度
+    const attract = 0.06    // 引力强度
+    const centerGravity = 0.015  // 中心引力
+
+    for (let iter = 0; iter < 200; iter++) {
+      alpha *= alphaDecay
+      if (alpha < 0.005) break
+
+      // 斥力：所有节点对
       for (let i = 0; i < allNodes.length; i++) {
         for (let j = i + 1; j < allNodes.length; j++) {
-          const dx = allNodes[j].x - allNodes[i].x
-          const dy = allNodes[j].y - allNodes[i].y
-          const dist = Math.sqrt(dx * dx + dy * dy) || 1
-          const force = 500 / (dist * dist)
-          
-          const fx = (dx / dist) * force
-          const fy = (dy / dist) * force
-          
-          allNodes[i].x -= fx
-          allNodes[i].y -= fy
-          allNodes[j].x += fx
-          allNodes[j].y += fy
+          let dx = allNodes[j].x - allNodes[i].x
+          let dy = allNodes[j].y - allNodes[i].y
+          let dist = Math.sqrt(dx * dx + dy * dy) || 1
+          // 同层知识点斥力更强（防止标签重叠）
+          const same = !allNodes[i].isLayer && !allNodes[j].isLayer && allNodes[i].layer_id === allNodes[j].layer_id
+          const f = repulse / dist * alpha * (same ? 2.0 : 1.0)
+          const fx = (dx / dist) * f
+          const fy = (dy / dist) * f
+          allNodes[i].x -= fx; allNodes[i].y -= fy
+          allNodes[j].x += fx; allNodes[j].y += fy
         }
       }
-      
-      // Attraction along links
+
+      // 引力：沿连边（知识点 → 所属层级节点）
       knowledge.value.forEach(k => {
-        const layerNode = allNodes.find(n => n.id === 'layer_' + k.layer_id)
-        const knowNode = allNodes.find(n => n.id === k.id)
-        
-        if (layerNode && knowNode) {
-          const dx = layerNode.x - knowNode.x
-          const dy = layerNode.y - knowNode.y
-          const dist = Math.sqrt(dx * dx + dy * dy)
-          
-          const force = dist * 0.01
-          
-          knowNode.x += (dx / dist) * force
-          knowNode.y += (dy / dist) * force
-        }
+        const lfn = allNodes.find(n => n.id === 'layer_' + k.layer_id)
+        const kn = allNodes.find(n => n.id === k.id)
+        if (!lfn || !kn) return
+        let dx = lfn.x - kn.x, dy = lfn.y - kn.y
+        let dist = Math.sqrt(dx * dx + dy * dy) || 1
+        const f = dist * attract * alpha
+        kn.x += (dx / dist) * f
+        kn.y += (dy / dist) * f
       })
+
+      // 中心引力（防止飞散）
+      for (const n of allNodes) {
+        n.x += (svgW / 2 - n.x) * centerGravity * alpha
+        n.y += (svgH / 2 - n.y) * centerGravity * alpha
+      }
     }
-    
-    // Apply positions
-    allNodes.forEach(n => {
-      n.baseX = n.x
-      n.baseY = n.y
-      nodes.push(n)
-    })
-    
-    // Add links
+
+    allNodes.forEach(n => { n.baseX = n.x; n.baseY = n.y; nodes.push(n) })
     knowledge.value.forEach(k => {
       links.push({ source: 'layer_' + k.layer_id, target: k.id, layer: layerMap[k.layer_id]?.name || '' })
     })
   }
-  
+
   graphNodes.value = nodes
   graphLinks.value = links
 }
