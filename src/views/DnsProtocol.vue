@@ -226,6 +226,7 @@ import StepIndicator from '@/components/StepIndicator.vue'
 import { dnsStepsMiss, dnsStepsHit, dnsNodes, dnsConnections } from '@/data/dns.js'
 import { dnsMissNarration, dnsHitNarration } from '@/data/dns_narration.js'
 import { speak, stopSpeak, isSpeechAvailable, preloadVoices } from '@/utils/speech.js'
+import { playDing, playStart, playComplete, isAudioAvailable } from '@/utils/ding.js'
 
 const domainInput = ref('www.lessybest.com')
 const cacheMode = ref('miss')
@@ -234,7 +235,7 @@ const isPlaying = ref(false)
 const speed = ref(1)
 const speeds = [0.5, 1, 2]
 const dnsCache = ref([])
-const voiceEnabled = ref(true)
+const voiceEnabled = ref(false)
 
 preloadVoices()
 
@@ -272,7 +273,10 @@ const gotoStep = (idx) => {
   isPlaying.value = false
   currentStepIndex.value = idx
   syncDnsCache()
-  if (currentStep.value) playNarration(currentStep.value.id)
+  if (currentStep.value) {
+    playNarration(currentStep.value.id)
+    playDing()
+  }
 }
 
 const handleStart = () => {
@@ -285,7 +289,10 @@ const handleStart = () => {
   isPlaying.value = true
   currentStepIndex.value = 0
   syncDnsCache()
-  if (currentStep.value) playNarration(currentStep.value.id)
+  if (currentStep.value) {
+    playNarration(currentStep.value.id)
+    playDing()
+  }
   autoPlay()
 }
 
@@ -296,14 +303,17 @@ const autoPlay = () => {
   }
   const step = activeSteps.value[currentStepIndex.value]
   const narration = currentNarration.value[step?.id]
-  const estimatedSpeechTime = narration ? Math.min(narration.length * 200, 8000) : 0
-  const waitTime = Math.max(estimatedSpeechTime, 2500) / speed.value
+  const estimatedSpeechTime = narration ? Math.min(narration.length * 120, 5000) : 0
+  const waitTime = Math.max(estimatedSpeechTime, 1200) / speed.value
 
   setTimeout(() => {
     if (!isPlaying.value) return
     currentStepIndex.value++
     syncDnsCache()
-    if (currentStep.value) playNarration(currentStep.value.id)
+    if (currentStep.value) {
+      playNarration(currentStep.value.id)
+      playDing()
+    }
     autoPlay()
   }, waitTime)
 }
@@ -313,7 +323,10 @@ const handleNext = () => {
   if (currentStepIndex.value < activeSteps.value.length - 1) {
     currentStepIndex.value++
     syncDnsCache()
-    if (currentStep.value) playNarration(currentStep.value.id)
+    if (currentStep.value) {
+      playNarration(currentStep.value.id)
+      playDing()
+    }
   }
 }
 
@@ -323,7 +336,10 @@ const handlePrev = () => {
   if (currentStepIndex.value > 0) {
     currentStepIndex.value--
     syncDnsCache()
-    if (currentStep.value) playNarration(currentStep.value.id)
+    if (currentStep.value) {
+      playNarration(currentStep.value.id)
+      playDing()
+    }
   }
 }
 

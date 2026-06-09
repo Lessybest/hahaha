@@ -457,13 +457,14 @@ import StepIndicator from '@/components/StepIndicator.vue'
 import { arpNodes, arpConnections, arpSameNetworkSteps, arpCrossNetworkSteps } from '@/data/arp.js'
 import { arpSameNetworkNarration, arpCrossNetworkNarration } from '@/data/arp_narration.js'
 import { speak, stopSpeak, isSpeechAvailable, preloadVoices } from '@/utils/speech.js'
+import { playDing, playStart, playComplete, isAudioAvailable } from '@/utils/ding.js'
 
 const currentMode = ref('same-network')
 const currentStepIndex = ref(-1)
 const isPlaying = ref(false)
 const speed = ref(1)
 const speeds = [0.5, 1, 2]
-const voiceEnabled = ref(true)
+const voiceEnabled = ref(false)
 
 // 预加载语音列表
 preloadVoices()
@@ -495,14 +496,20 @@ const switchMode = (mode) => {
 const gotoStep = (idx) => {
   isPlaying.value = false
   currentStepIndex.value = idx
-  if (currentStep.value) playNarration(currentStep.value.id)
+  if (currentStep.value) {
+    playNarration(currentStep.value.id)
+    playDing()
+  }
 }
 
 const handleStart = () => {
   handleReset()
   isPlaying.value = true
   currentStepIndex.value = 0
-  if (currentStep.value) playNarration(currentStep.value.id)
+  if (currentStep.value) {
+    playNarration(currentStep.value.id)
+    playDing()
+  }
   autoPlay()
 }
 
@@ -514,13 +521,16 @@ const autoPlay = () => {
   // 根据语音长度动态调整等待时间
   const step = currentSteps.value[currentStepIndex.value]
   const narration = currentNarration.value[step?.id]
-  const estimatedSpeechTime = narration ? Math.min(narration.length * 200, 8000) : 0
-  const waitTime = Math.max(estimatedSpeechTime, 2500) / speed.value
+  const estimatedSpeechTime = narration ? Math.min(narration.length * 120, 5000) : 0
+  const waitTime = Math.max(estimatedSpeechTime, 1200) / speed.value
 
   setTimeout(() => {
     if (!isPlaying.value) return
     currentStepIndex.value++
-    if (currentStep.value) playNarration(currentStep.value.id)
+    if (currentStep.value) {
+      playNarration(currentStep.value.id)
+      playDing()
+    }
     autoPlay()
   }, waitTime)
 }
@@ -529,7 +539,10 @@ const handleNext = () => {
   isPlaying.value = false
   if (currentStepIndex.value < currentSteps.value.length - 1) {
     currentStepIndex.value++
-    if (currentStep.value) playNarration(currentStep.value.id)
+    if (currentStep.value) {
+      playNarration(currentStep.value.id)
+      playDing()
+    }
   }
 }
 
@@ -538,7 +551,10 @@ const handlePrev = () => {
   stopSpeak()
   if (currentStepIndex.value > 0) {
     currentStepIndex.value--
-    if (currentStep.value) playNarration(currentStep.value.id)
+    if (currentStep.value) {
+      playNarration(currentStep.value.id)
+      playDing()
+    }
   }
 }
 
