@@ -159,7 +159,7 @@
               <div class="text-[10px] text-text-muted mt-0.5">完成模块</div>
             </div>
             <div class="text-center">
-              <div class="text-2xl font-bold text-accent-secondary">95%</div>
+              <div class="text-2xl font-bold text-accent-secondary">100%</div>
               <div class="text-[10px] text-text-muted mt-0.5">完成度</div>
             </div>
             <div class="text-center">
@@ -170,7 +170,7 @@
 
           <!-- Progress Bar -->
           <div class="h-2 rounded-full bg-white/5 overflow-hidden mb-5">
-            <div class="h-full rounded-full bg-gradient-to-r from-accent-primary to-accent-success transition-all duration-1000" style="width: 95%"></div>
+            <div class="h-full rounded-full bg-gradient-to-r from-accent-primary to-accent-success transition-all duration-1000" style="width: 100%"></div>
           </div>
 
           <!-- Module Tags -->
