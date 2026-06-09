@@ -3,7 +3,7 @@
     <div class="pt-8 pb-6 fade-up">
       <h1 class="text-2xl font-bold mb-2">综合网络场景模拟</h1>
       <p class="text-text-secondary text-sm">
-        H1（192.168.1.100）访问 www.abc.com 的完整通信过程 — 从 ARP → DNS → TCP → HTTP 全链路可视化
+        H1（192.168.1.100）访问 www.lessybest.com 的完整通信过程 — 从 ARP → DNS → TCP → HTTP 全链路可视化
       </p>
     </div>
 
@@ -182,7 +182,7 @@ const topoNodes = [
   { id: 'switch', label: '交换机',     shortLabel: 'SW',  ip: 'N/A',             color: '#6b7280' },
   { id: 'router', label: '路由器/网关', shortLabel: 'R',   ip: '192.168.1.1',    color: '#f59e0b' },
   { id: 'dns',    label: 'DNS服务器',  shortLabel: 'DNS', ip: '192.168.1.1',    color: '#00d4ff' },
-  { id: 'www',    label: 'www.abc.com', shortLabel: 'WWW', ip: '93.184.216.34', color: '#10b981' },
+  { id: 'www',    label: 'www.lessybest.com', shortLabel: 'WWW', ip: '93.184.216.34', color: '#10b981' },
 ]
 
 // ========== 状态 ==========
@@ -223,7 +223,7 @@ const steps = ref([
   {
     id: 1,
     title: 'Step 1：H1 检查 DNS 缓存',
-    description: 'H1 在浏览器输入 www.abc.com，操作系统先检查本地 DNS 缓存。本演示设定为缓存未命中，需要向 DNS 服务器发起查询。同时检查 ARP 缓存中是否有网关 192.168.1.1 的 MAC 地址。',
+    description: 'H1 在浏览器输入 www.lessybest.com，操作系统先检查本地 DNS 缓存。本演示设定为缓存未命中，需要向 DNS 服务器发起查询。同时检查 ARP 缓存中是否有网关 192.168.1.1 的 MAC 地址。',
     protocol: 'DNS',
     protocolColor: '#00d4ff',
     arpTableAfter: [],
@@ -232,13 +232,13 @@ const steps = ref([
     tcpState: '未建立',
     highlightNodes: ['h1'],
     packetDetail: {
-      '操作': '浏览器发起 http://www.abc.com 请求',
+      '操作': '浏览器发起 http://www.lessybest.com 请求',
       'DNS缓存': '未命中（首次访问）',
       'ARP缓存(网关)': '192.168.1.1 → 未知',
       '决定动作': '先发起 ARP Request 解析网关 MAC',
     },
     protocolStack: [
-      { layer: '应用层', content: 'HTTP Request: GET / www.abc.com', color: '#00d4ff' },
+      { layer: '应用层', content: 'HTTP Request: GET / www.lessybest.com', color: '#00d4ff' },
       { layer: '传输层', content: '（等待 DNS 解析）', color: '#6b7280' },
       { layer: '网络层', content: '查路由表：默认路由 → 网关 192.168.1.1', color: '#7c3aed' },
       { layer: '链路层', content: 'ARP 缓存空 → 需广播 ARP Request', color: '#f59e0b' },
@@ -312,7 +312,7 @@ const steps = ref([
   {
     id: 4,
     title: 'Step 4：发送 DNS 递归查询（UDP 端口 53）',
-    description: 'H1 已获知网关 MAC，现在构造 DNS 查询报文。应用层：DNS Query（递归查询 www.abc.com 的 A 记录）；传输层：UDP 数据报，源端口随机（如 49152），目标端口 53；网络层：源 IP=192.168.1.100，目标 IP=192.168.1.1（本地 DNS）；链路层：源 MAC=00:11:22:33:44:01，目标 MAC=00:AA:BB:CC:DD:01（网关）。',
+    description: 'H1 已获知网关 MAC，现在构造 DNS 查询报文。应用层：DNS Query（递归查询 www.lessybest.com 的 A 记录）；传输层：UDP 数据报，源端口随机（如 49152），目标端口 53；网络层：源 IP=192.168.1.100，目标 IP=192.168.1.1（本地 DNS）；链路层：源 MAC=00:11:22:33:44:01，目标 MAC=00:AA:BB:CC:DD:01（网关）。',
     protocol: 'DNS',
     protocolColor: '#00d4ff',
     arpTableAfter: [{ ip: '192.168.1.1', mac: '00:AA:BB:CC:DD:01', ttl: '20分钟', type: '动态', new: false }],
@@ -326,7 +326,7 @@ const steps = ref([
     packetDetail: {
       '事务 ID': '0x1a2b（随机数，匹配请求与响应）',
       '标志位': 'RD=1（期望递归查询），AA=0（非权威回答）',
-      '问题数': '1（www.abc.com A 记录）',
+      '问题数': '1（www.lessybest.com A 记录）',
       '回答数': '0（查询阶段）',
       '查询类型': 'A（IPv4 地址）',
       '查询类': 'IN（Internet）',
@@ -334,7 +334,7 @@ const steps = ref([
       '目标端口': '53',
     },
     protocolStack: [
-      { layer: '应用层', content: 'DNS Query: www.abc.com A（递归）', color: '#00d4ff' },
+      { layer: '应用层', content: 'DNS Query: www.lessybest.com A（递归）', color: '#00d4ff' },
       { layer: '传输层', content: 'UDP Src:49152 → Dst:53', color: '#10b981' },
       { layer: '网络层', content: 'Src: 192.168.1.100 → Dst: 192.168.1.1', color: '#7c3aed' },
       { layer: '链路层', content: 'Src MAC: 00:11:22:33:44:01 → Dst MAC: 00:AA:BB:CC:DD:01', color: '#f59e0b' },
@@ -343,8 +343,8 @@ const steps = ref([
   // Step 5
   {
     id: 5,
-    title: 'Step 5：收到 DNS 响应（www.abc.com = 93.184.216.34）',
-    description: '本地 DNS 服务器完成递归查询后，将结果返回给 H1。DNS Response 报文：事务 ID 与查询匹配，标志位 AA=1（权威回答）或 RA=1（支持递归），回答数=1，www.abc.com 的 A 记录为 93.184.216.34，TTL=300秒（5分钟）。H1 收到响应后，将 www.abc.com ↔ 93.184.216.34 写入 DNS 缓存。',
+    title: 'Step 5：收到 DNS 响应（www.lessybest.com = 93.184.216.34）',
+    description: '本地 DNS 服务器完成递归查询后，将结果返回给 H1。DNS Response 报文：事务 ID 与查询匹配，标志位 AA=1（权威回答）或 RA=1（支持递归），回答数=1，www.lessybest.com 的 A 记录为 93.184.216.34，TTL=300秒（5分钟）。H1 收到响应后，将 www.lessybest.com ↔ 93.184.216.34 写入 DNS 缓存。',
     protocol: 'DNS',
     protocolColor: '#00d4ff',
     arpTableAfter: [{ ip: '192.168.1.1', mac: '00:AA:BB:CC:DD:01', ttl: '20分钟', type: '动态', new: false }],
@@ -352,20 +352,20 @@ const steps = ref([
       { mac: '00:11:22:33:44:01', port: '端口1', age: '2分钟', new: false },
       { mac: '00:AA:BB:CC:DD:01', port: '端口2', age: '1分钟', new: false },
     ],
-    dnsCacheAfter: [{ domain: 'www.abc.com', ip: '93.184.216.34', ttl: '300秒', new: true }],
+    dnsCacheAfter: [{ domain: 'www.lessybest.com', ip: '93.184.216.34', ttl: '300秒', new: true }],
     tcpState: '未建立',
     highlightNodes: ['dns', 'router', 'switch', 'h1'],
     packetDetail: {
       '事务 ID': '0x1a2b（与查询匹配）',
       '标志位': 'AA=1（权威回答），RA=1（支持递归）',
-      '问题数': '1（www.abc.com A）',
+      '问题数': '1（www.lessybest.com A）',
       '回答数': '1（A 记录）',
-      '回答内容': 'www.abc.com A 93.184.216.34',
+      '回答内容': 'www.lessybest.com A 93.184.216.34',
       'TTL': '300秒（5分钟）',
       '传输协议': 'UDP（响应仍走 UDP）',
     },
     protocolStack: [
-      { layer: '应用层', content: 'DNS Response: www.abc.com A = 93.184.216.34', color: '#00d4ff' },
+      { layer: '应用层', content: 'DNS Response: www.lessybest.com A = 93.184.216.34', color: '#00d4ff' },
       { layer: '传输层', content: 'UDP Src:53 → Dst:49152', color: '#10b981' },
       { layer: '网络层', content: 'Src: 192.168.1.1 → Dst: 192.168.1.100', color: '#7c3aed' },
       { layer: '链路层', content: 'Src MAC: 00:AA:BB:CC:DD:01 → Dst MAC: 00:11:22:33:44:01', color: '#f59e0b' },
@@ -375,7 +375,7 @@ const steps = ref([
   {
     id: 6,
     title: 'Step 6：TCP 三次握手（SYN → SYN-ACK → ACK）',
-    description: 'H1 已知 www.abc.com 的 IP（93.184.216.34），开始建立 TCP 连接。第一次握手：H1 发送 TCP SYN（Seq=1000，标志位 SYN=1），目标端口 80（HTTP）。第二次握手：服务器收到 SYN，回复 SYN-ACK（Seq=5000，Ack=1001，标志位 SYN=1, ACK=1）。第三次握手：H1 发送 ACK（Seq=1001，Ack=5001，标志位 ACK=1）。TCP 连接建立，进入 ESTABLISHED 状态。',
+    description: 'H1 已知 www.lessybest.com 的 IP（93.184.216.34），开始建立 TCP 连接。第一次握手：H1 发送 TCP SYN（Seq=1000，标志位 SYN=1），目标端口 80（HTTP）。第二次握手：服务器收到 SYN，回复 SYN-ACK（Seq=5000，Ack=1001，标志位 SYN=1, ACK=1）。第三次握手：H1 发送 ACK（Seq=1001，Ack=5001，标志位 ACK=1）。TCP 连接建立，进入 ESTABLISHED 状态。',
     protocol: 'TCP',
     protocolColor: '#10b981',
     arpTableAfter: [
@@ -385,7 +385,7 @@ const steps = ref([
       { mac: '00:11:22:33:44:01', port: '端口1', age: '3分钟', new: false },
       { mac: '00:AA:BB:CC:DD:01', port: '端口2', age: '2分钟', new: false },
     ],
-    dnsCacheAfter: [{ domain: 'www.abc.com', ip: '93.184.216.34', ttl: '300秒', new: false }],
+    dnsCacheAfter: [{ domain: 'www.lessybest.com', ip: '93.184.216.34', ttl: '300秒', new: false }],
     tcpState: 'ESTABLISHED（连接已建立）',
     highlightNodes: ['h1', 'switch', 'router', 'www'],
     packetDetail: {
@@ -408,7 +408,7 @@ const steps = ref([
   {
     id: 7,
     title: 'Step 7：发送 HTTP GET 请求（Application Data）',
-    description: 'TCP 连接建立后，H1 构造 HTTP GET 请求报文。应用层：GET / HTTP/1.1，Host: www.abc.com，User-Agent: Mozilla/5.0...；传输层：TCP 报文（Seq=1001，Ack=5001，标志位 PSH=1, ACK=1），源端口 49152，目标端口 80；网络层：源 IP=192.168.1.100，目标 IP=93.184.216.34；链路层：源 MAC=00:11:22:33:44:01，目标 MAC=00:AA:BB:CC:DD:01（网关）。',
+    description: 'TCP 连接建立后，H1 构造 HTTP GET 请求报文。应用层：GET / HTTP/1.1，Host: www.lessybest.com，User-Agent: Mozilla/5.0...；传输层：TCP 报文（Seq=1001，Ack=5001，标志位 PSH=1, ACK=1），源端口 49152，目标端口 80；网络层：源 IP=192.168.1.100，目标 IP=93.184.216.34；链路层：源 MAC=00:11:22:33:44:01，目标 MAC=00:AA:BB:CC:DD:01（网关）。',
     protocol: 'HTTP',
     protocolColor: '#ef4444',
     arpTableAfter: [
@@ -418,12 +418,12 @@ const steps = ref([
       { mac: '00:11:22:33:44:01', port: '端口1', age: '4分钟', new: false },
       { mac: '00:AA:BB:CC:DD:01', port: '端口2', age: '3分钟', new: false },
     ],
-    dnsCacheAfter: [{ domain: 'www.abc.com', ip: '93.184.216.34', ttl: '300秒', new: false }],
+    dnsCacheAfter: [{ domain: 'www.lessybest.com', ip: '93.184.216.34', ttl: '300秒', new: false }],
     tcpState: 'ESTABLISHED（数据传输中）',
     highlightNodes: ['h1', 'switch', 'router', 'www'],
     packetDetail: {
       'HTTP方法': 'GET / HTTP/1.1',
-      'Host': 'www.abc.com',
+      'Host': 'www.lessybest.com',
       'User-Agent': 'Mozilla/5.0（Windows NT 10.0; Win64; x64）',
       'Accept': 'text/html,application/xhtml+xml',
       'Connection': 'keep-alive',
@@ -433,7 +433,7 @@ const steps = ref([
       '目标端口': '80（HTTP）',
     },
     protocolStack: [
-      { layer: '应用层', content: 'HTTP GET / HTTP/1.1 Host: www.abc.com', color: '#ef4444' },
+      { layer: '应用层', content: 'HTTP GET / HTTP/1.1 Host: www.lessybest.com', color: '#ef4444' },
       { layer: '传输层', content: 'TCP Seq=1001, Ack=5001, PSH+ACK（源端口 49152 → 80）', color: '#10b981' },
       { layer: '网络层', content: 'Src: 192.168.1.100 → Dst: 93.184.216.34', color: '#7c3aed' },
       { layer: '链路层', content: 'Src MAC: 00:11:22:33:44:01 → Dst MAC: 00:AA:BB:CC:DD:01（网关）', color: '#f59e0b' },
@@ -453,7 +453,7 @@ const steps = ref([
       { mac: '00:11:22:33:44:01', port: '端口1', age: '5分钟', new: false },
       { mac: '00:AA:BB:CC:DD:01', port: '端口2', age: '4分钟', new: false },
     ],
-    dnsCacheAfter: [{ domain: 'www.abc.com', ip: '93.184.216.34', ttl: '300秒', new: false }],
+    dnsCacheAfter: [{ domain: 'www.lessybest.com', ip: '93.184.216.34', ttl: '300秒', new: false }],
     tcpState: 'ESTABLISHED（可 keep-alive 或四次挥手关闭）',
     highlightNodes: ['www', 'router', 'switch', 'h1'],
     packetDetail: {
@@ -489,7 +489,7 @@ async function handleStart() {
     await sleep(speed.value)
   }
   playing.value = false
-  addLog('🎉 演示完成！H1 已成功访问 www.abc.com', true)
+  addLog('🎉 演示完成！H1 已成功访问 www.lessybest.com', true)
 }
 
 function handleNext() {
