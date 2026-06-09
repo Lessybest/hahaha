@@ -146,23 +146,23 @@
             marker-end="url(#arrow-default)"
           />
           <!-- Layer labels -->
-          <g v-for="(layer, li) in graphLayers" :key="layer.id">
+          <g v-for="node in graphNodes.filter(n => n.isLayer)" :key="node.id">
             <rect
-              :x="layer.x - 40" :y="20"
+              :x="node.x - 40" :y="node.y - 30"
               width="80" height="22"
               rx="11"
-              :fill="layer.color + '15'"
-              :stroke="layer.color + '40'"
+              :fill="node.color + '15'"
+              :stroke="node.color + '40'"
               stroke-width="1"
             />
             <text
-              :x="layer.x" y="35"
+              :x="node.x" y="-15"
               text-anchor="middle"
-              :fill="layer.color"
+              :fill="node.color"
               font-size="11"
               font-weight="600"
               font-family="Inter"
-            >{{ layer.name }}</text>
+            >{{ node.label }}</text>
           </g>
           <!-- Nodes -->
           <g
@@ -326,16 +326,19 @@ const knowledgeItems = computed(() =>
 )
 
 // Graph data
-const graphLayers = computed(() => {
+const graphLayers = ref([])
+
+const buildGraphLayers = () => {
   const ordered = layers.value.slice().sort((a, b) => a.sort_order - b.sort_order)
   const width = 900
   const startX = 100
   const step = (width - 200) / (ordered.length - 1 || 1)
-  return ordered.map((l, i) => ({
+  graphLayers.value = ordered.map((l, i) => ({
     ...l,
     x: startX + i * step,
+    y: 80,
   }))
-})
+}
 
 const graphNodes = ref([])
 const graphLinks = ref([])
@@ -501,9 +504,16 @@ const graphTransform = computed(() => {
   return `translate(${graphOffset.value.x},${graphOffset.value.y}) scale(${graphScale.value})`
 })
 
+watch([layers, activeLayer], () => {
+  if (layers.value.length > 0) {
+    buildGraphLayers()
+    if (activeLayer.value === 'graph') buildGraphData()
+  }
+}, { immediate: true })
+
 watch([activeLayer, knowledge, graphLayout], () => {
   if (activeLayer.value === 'graph') buildGraphData()
-}, { immediate: true })
+})
 
 // Drag
 const draggedNode = ref(null)
