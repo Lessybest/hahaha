@@ -88,6 +88,18 @@
         <!-- Controls -->
         <div class="glass-card p-4 fade-up stagger-3">
           <div class="flex flex-wrap gap-2 items-center mb-4">
+        <!-- Voice toggle -->
+        <button
+          v-if="isSpeechAvailable()"
+          class="relative flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all"
+          :class="voiceEnabled ? 'bg-accent-secondary/20 text-accent-secondary border border-accent-secondary/40' : 'bg-white/5 text-text-muted border border-border-subtle hover:border-border-hover'"
+          @click="voiceEnabled = !voiceEnabled; if (!voiceEnabled) stopSpeak()"
+        >
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
+            <path d="M7 1a3 3 0 0 0-3 3v3a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3zM2 6v1a5 5 0 0 0 4 4.9V13H6a1 1 0 0 0 0 2h2a1 1 0 0 0 0-2H8v-1.1A5 5 0 0 0 12 7V6a1 1 0 0 0-2 0v1a3 3 0 0 1-6 0V6a1 1 0 0 0-2 0z"/>
+          </svg>
+          {{ voiceEnabled ? '配音开' : '配音关' }}
+        </button>
             <button class="btn-primary text-sm bg-accent-warning/90 hover:bg-accent-warning" @click="handleStart" :disabled="isPlaying">
               开始
             </button>
@@ -443,12 +455,18 @@ import { ref, computed } from 'vue'
 import TopoCanvas from '@/components/TopoCanvas.vue'
 import StepIndicator from '@/components/StepIndicator.vue'
 import { arpNodes, arpConnections, arpSameNetworkSteps, arpCrossNetworkSteps } from '@/data/arp.js'
+import { arpSameNetworkNarration, arpCrossNetworkNarration } from '@/data/arp_narration.js'
+import { speak, stopSpeak, isSpeechAvailable, preloadVoices } from '@/utils/speech.js'
 
 const currentMode = ref('same-network')
 const currentStepIndex = ref(-1)
 const isPlaying = ref(false)
 const speed = ref(1)
 const speeds = [0.5, 1, 2]
+const voiceEnabled = ref(true)
+
+// 预加载语音列表
+preloadVoices()
 
 const currentSteps = computed(() => {
   return currentMode.value === 'same-network' ? arpSameNetworkSteps : arpCrossNetworkSteps
@@ -459,6 +477,16 @@ const currentStep = computed(() => {
   return currentSteps.value[currentStepIndex.value] || null
 })
 
+const currentNarration = computed(() => {
+  return currentMode.value === 'same-network' ? arpSameNetworkNarration : arpCrossNetworkNarration
+})
+
+const playNarration = (stepId) => {
+  if (!voiceEnabled.value || !stepId) return
+  const text = currentNarration.value[stepId]
+  if (text) speak(text, { rate: 0.95, volume: 0.8 })
+}
+
 const switchMode = (mode) => {
   currentMode.value = mode
   handleReset()
@@ -467,12 +495,14 @@ const switchMode = (mode) => {
 const gotoStep = (idx) => {
   isPlaying.value = false
   currentStepIndex.value = idx
+  if (currentStep.value) playNarration(currentStep.value.id)
 }
 
 const handleStart = () => {
   handleReset()
   isPlaying.value = true
   currentStepIndex.value = 0
+  if (currentStep.value) playNarration(currentStep.value.id)
   autoPlay()
 }
 
@@ -481,29 +511,40 @@ const autoPlay = () => {
     isPlaying.value = false
     return
   }
+  // 根据语音长度动态调整等待时间
+  const step = currentSteps.value[currentStepIndex.value]
+  const narration = currentNarration.value[step?.id]
+  const estimatedSpeechTime = narration ? Math.min(narration.length * 200, 8000) : 0
+  const waitTime = Math.max(estimatedSpeechTime, 2500) / speed.value
+
   setTimeout(() => {
     if (!isPlaying.value) return
     currentStepIndex.value++
+    if (currentStep.value) playNarration(currentStep.value.id)
     autoPlay()
-  }, 2000 / speed.value)
+  }, waitTime)
 }
 
 const handleNext = () => {
   isPlaying.value = false
   if (currentStepIndex.value < currentSteps.value.length - 1) {
     currentStepIndex.value++
+    if (currentStep.value) playNarration(currentStep.value.id)
   }
 }
 
 const handlePrev = () => {
   isPlaying.value = false
+  stopSpeak()
   if (currentStepIndex.value > 0) {
     currentStepIndex.value--
+    if (currentStep.value) playNarration(currentStep.value.id)
   }
 }
 
 const handleReset = () => {
   isPlaying.value = false
+  stopSpeak()
   currentStepIndex.value = -1
 }
 </script>
